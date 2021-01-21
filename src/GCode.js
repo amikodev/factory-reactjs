@@ -719,7 +719,7 @@ var GCode = (function(){
 
 
             if(compensationFunc !== null){
-                let {  } = compensationFunc(pMoveParams, pMoveNextParams);
+                // let {  } = compensationFunc(pMoveParams, pMoveNextParams);
 
             }
 
