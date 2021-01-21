@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -20,12 +20,12 @@ import React from 'react';
 
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
-import TextField from '@material-ui/core/TextField';
+// import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
-import Paper from '@material-ui/core/Paper';
-import Tooltip from '@material-ui/core/Tooltip';
-import Snackbar from '@material-ui/core/Snackbar';
-import LinearProgress from '@material-ui/core/LinearProgress';
+// import Paper from '@material-ui/core/Paper';
+// import Tooltip from '@material-ui/core/Tooltip';
+// import Snackbar from '@material-ui/core/Snackbar';
+// import LinearProgress from '@material-ui/core/LinearProgress';
 import Slider from '@material-ui/core/Slider';
 
 
@@ -55,9 +55,9 @@ const useStyles = theme => ({
 
 const OBJ_NAME_ENGINE = 0x50;
 const OBJ_NAME_FREQ = 0x51;
-const OBJ_NAME_DIRECTION = 0x52;
+// const OBJ_NAME_DIRECTION = 0x52;
 
-const CMD_READ = 0x01;
+// const CMD_READ = 0x01;
 const CMD_WRITE = 0x02;
 
 const ENGINE_STATE_RUN = 0x01;
@@ -122,7 +122,7 @@ class FreqConverter extends React.Component{
     }
 
     handleFreqChange(event, value){
-        const { item } = this.props;
+        // const { item } = this.props;
 
         // console.log(value);
         this.setFreq(value);

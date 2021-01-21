@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -33,11 +33,11 @@ import Alert from '@material-ui/lab/Alert';
 
 
 
-import SaveIcon from '@material-ui/icons/Save';
+// import SaveIcon from '@material-ui/icons/Save';
 import FolderOpenIcon from '@material-ui/icons/FolderOpen';
-import GestureIcon from '@material-ui/icons/Gesture';
+// import GestureIcon from '@material-ui/icons/Gesture';
 import ImageIcon from '@material-ui/icons/Image';
-import PanToolIcon from '@material-ui/icons/PanTool';
+// import PanToolIcon from '@material-ui/icons/PanTool';
 import PublishIcon from '@material-ui/icons/Publish';
 import ComputerIcon from '@material-ui/icons/Computer';
 import EditIcon from '@material-ui/icons/Edit';
@@ -95,20 +95,20 @@ const OBJ_NAME_COORDS = 0x53;
 const OBJ_NAME_COORD_TARGET = 0x54;
 const OBJ_NAME_PLASMA_ARC = 0x55;
 
-const CMD_READ = 0x01;
-const CMD_WRITE = 0x02;
+// const CMD_READ = 0x01;
+// const CMD_WRITE = 0x02;
 const CMD_RUN = 0x03;
 const CMD_STOP = 0x04;
 
-const AXE_X = 0x01;
-const AXE_Y = 0x02;
-const AXE_Z = 0x03;
-const AXE_A = 0x04;
-const AXE_B = 0x05;
-const AXE_C = 0x06;
+// const AXE_X = 0x01;
+// const AXE_Y = 0x02;
+// const AXE_Z = 0x03;
+// const AXE_A = 0x04;
+// const AXE_B = 0x05;
+// const AXE_C = 0x06;
 
-const AXE_DIRECTION_FORWARD = 0x01;
-const AXE_DIRECTION_BACKWARD = 0x02;
+// const AXE_DIRECTION_FORWARD = 0x01;
+// const AXE_DIRECTION_BACKWARD = 0x02;
 
 const PREPARE_SIZE = 0x01;
 const PREPARE_RUN = 0x02;
@@ -133,6 +133,7 @@ class CncRouter extends React.Component{
         this.handleArrowDown = this.handleArrowDown.bind(this);
         this.handleArrowUp = this.handleArrowUp.bind(this);
         this.handlePlasmaArcDoStart = this.handlePlasmaArcDoStart.bind(this);
+        this.handleOpenGcode = this.handleOpenGcode.bind(this);
         this.getPointerCanvas = this.getPointerCanvas.bind(this);
 
         this.state = {
@@ -233,9 +234,10 @@ class CncRouter extends React.Component{
             };
           
             reader.onerror = function() {
-                console.log(reader.error);
+                console.log('error', reader.error);
             };
           
+            event.target.value = null;
         }
     }
 
@@ -301,7 +303,7 @@ class CncRouter extends React.Component{
             listenerInd = addListenerWsRecieve(item.name, data => {
                 data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
                 // console.log('data', data);
-                if(data[0] == OBJ_NAME_CNC_GCODE){
+                if(data[0] === OBJ_NAME_CNC_GCODE){
                     // removeListenerWsRecieve(item.name, listenerInd);
                     if(numLine < parsed.data.length-1){
                         // numLine++;
@@ -355,16 +357,16 @@ class CncRouter extends React.Component{
                 listenerInd = addListenerWsRecieve(item.name, data => {
                     data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
                     console.log('data recieve', data);
-                    if(data[0] == OBJ_NAME_CNC_GCODE_PREPARE){
-                        if(data[1] == PREPARE_SIZE){
-                            if(data[2] == 1){       // контроллер готов принимать программу, памяти хватает
+                    if(data[0] === OBJ_NAME_CNC_GCODE_PREPARE){
+                        if(data[1] === PREPARE_SIZE){
+                            if(data[2] === 1){       // контроллер готов принимать программу, памяти хватает
                                 sendProg();
                             } else{                 // контроллер не готов принимать программу, памяти не хватает
                                 this.setState({messageErrorOpened: true});
 
                             }
                             removeListenerWsRecieve(item.name, listenerInd);
-                        } else if(data[1] == PREPARE_RUN){
+                        } else if(data[1] === PREPARE_RUN){
 
                         }
                     }
@@ -382,7 +384,8 @@ class CncRouter extends React.Component{
     }
 
     handleRunGcodeClick(event){
-        const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve } = this.context;
+        // const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve } = this.context;
+        const { wsPrepareData } = this.context;
         const { item } = this.props;
 
         let ws = window.Equipments.getItemWs(item.name);
@@ -397,13 +400,6 @@ class CncRouter extends React.Component{
     handleArrowDown(axeNum, direction, speed, runAfterLimit){
         const { wsPrepareData, floatToArray } = this.context;
         const { item } = this.props;
-
-
-        // // преобразование float в массив hex
-        // var view = new DataView(new ArrayBuffer(4));
-        // view.setFloat32(0, parseFloat(speed));
-        // // hexArr = Array.apply(null, { length: 4 }).map((_, i) => view.getUint8(i));
-        // let hexArr = Array.apply(null, { length: 4 }).map((_, i) => view.getUint8(3-i));
 
         let data = [OBJ_NAME_AXE, CMD_RUN, (axeNum) & 0xFF, (direction) & 0xFF];
         let hexArr = floatToArray(speed);
@@ -446,12 +442,13 @@ class CncRouter extends React.Component{
     }
 
     handlePointerReady(){
-        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom());
+        let zoom = 20;
+        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom() * zoom);
         // GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom()*20);
     }
 
     handlePointerChangeZoom(zoom){
-        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom()*zoom);
+        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom() * zoom);
         GCode.draw();
     }
 
@@ -567,13 +564,13 @@ class CncRouter extends React.Component{
                                 </Tooltip>
                             </label>
 
-                            <Tooltip title={('Нарисовать')} arrow disabled={this.state.gcodeLines.length == 0}>
+                            <Tooltip title={('Нарисовать')} arrow disabled={this.state.gcodeLines.length === 0}>
                                 <Button variant="contained" color="default" component="span" onClick={e => this.handleDrawClick(e)}>
                                     <ImageIcon/>
                                 </Button>
                             </Tooltip>
 
-                            <Tooltip title={('Загрузить в контроллер')} arrow disabled={this.state.gcodeLines.length == 0}>
+                            <Tooltip title={('Загрузить в контроллер')} arrow disabled={this.state.gcodeLines.length === 0}>
                                 <Button variant="contained" color="default" component="span" onClick={e => this.handleUploadClick(e)}>
                                     <PublishIcon/>
                                 </Button>
@@ -585,12 +582,13 @@ class CncRouter extends React.Component{
                                 </Button>
                             </Tooltip>
 
+                            {false &&
                             <Tooltip title={('Редактировать')} arrow disabled={false}>
                                 <Button variant="contained" color="default" component="span" onClick={e => this.handleGcodeEditClick(e)}>
                                     <EditIcon/>
                                 </Button>
                             </Tooltip>
-
+                            }
                             
 
                         </div>

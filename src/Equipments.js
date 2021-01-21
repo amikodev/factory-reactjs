@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -20,13 +20,13 @@ import React from 'react';
 // import { makeStyles } from '@material-ui/core/styles';
 import Card from '@material-ui/core/Card';
 import CardActionArea from '@material-ui/core/CardActionArea';
-import CardActions from '@material-ui/core/CardActions';
+// import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
-import CardMedia from '@material-ui/core/CardMedia';
-import Button from '@material-ui/core/Button';
+// import CardMedia from '@material-ui/core/CardMedia';
+// import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 
-import AddIcon from '@material-ui/icons/Add';
+// import AddIcon from '@material-ui/icons/Add';
 import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
 
 import Grid from '@material-ui/core/Grid';
@@ -99,7 +99,7 @@ class Equipments extends React.Component {
 
         // EquipmentsAPI.items = items;
 
-        if(items.length == 1){
+        if(items.length === 1){
 
             this.handleItemSelect(items[0]);
 
@@ -108,7 +108,7 @@ class Equipments extends React.Component {
 
         items.map(item => {
             if(typeof EquipmentsAPI.itemsWs[item.name] !== "undefined")
-                return;
+                return null;
 
             let wsUrl = 'ws://'+item.url+'/';
             console.log('WebSocket: '+wsUrl);
@@ -162,6 +162,7 @@ class Equipments extends React.Component {
 
             EquipmentsAPI.itemsWs[item.name] = ws;
             _this.setState({items: items});
+            return null;
         });
 
         // }
@@ -308,8 +309,8 @@ window.Equipments = (() => {
                 type: Equipments.TYPE_CNC_ROUTER, 
                 caption: 'Plasma', 
                 name: 'cncPlasma', 
-                url: '192.168.1.65', 
-                // url: '192.168.1.113', 
+                // url: '192.168.1.65', 
+                url: '192.168.1.113', 
                 stateConnect: Equipments.STATE_NONE, 
                 params: {x: 1300, y: 2500, z: 120}
             },
@@ -356,7 +357,8 @@ window.Equipments = (() => {
     const getItem = (name) => {
         let item = null;
         EquipmentsAPI.items.map((el => {
-            if(el.name == name) item = el;
+            if(el.name === name) item = el;
+            return null;
         }));
         if(item === null)
             throw new Error('Item "'+name+'" not found.');
@@ -368,7 +370,7 @@ window.Equipments = (() => {
         getItems: () => [...EquipmentsAPI.items],
         getItem: getItem,
         getItemWs: (name) => {
-            let item = getItem(name);
+            // let item = getItem(name);
             let ws = typeof EquipmentsAPI.itemsWs[name] !== "undefined" ? EquipmentsAPI.itemsWs[name] : null;
             if(ws === null)
                 throw new Error('WebSocket for "'+name+'" not created.');

@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -22,7 +22,7 @@ import React from 'react';
 import './App.css';
 import 'fontsource-roboto';
 
-import { Button } from '@material-ui/core';
+// import { Button } from '@material-ui/core';
 
 import AppsIcon from '@material-ui/icons/Apps';
 import BuildIcon from '@material-ui/icons/Build';
@@ -44,15 +44,15 @@ import FreqConverter from './equipment/freqConv/FreqConverter';
 
 import CncRouterSettings from './settings/CncRouterSettings';
 
-import { render } from 'react-dom';
+// import { render } from 'react-dom';
 // import { withStyles } from '@material-ui/core/styles';
 
 
-const TAB_EQUIPMENTS = 0;
+// const TAB_EQUIPMENTS = 0;
 const TAB_EQUIPMENT = 1;
-const TAB_SETTINGS = 2;
-const TAB_MACROS = 3;
-const TAB_ABOUT = 4;
+// const TAB_SETTINGS = 2;
+// const TAB_MACROS = 3;
+// const TAB_ABOUT = 4;
 
 // const useStyles = makeStyles((theme) => ({
 // // const useStyles = theme => ({
@@ -114,6 +114,7 @@ class App extends React.Component{
                 break;
             case Equipments.TYPE_FREQ_CONVERTER:
                 component = <FreqConverter item={item} />;
+                break;
             default:
                 break;
         }
@@ -140,6 +141,7 @@ class App extends React.Component{
                 break;
             case Equipments.TYPE_FREQ_CONVERTER:
                 component = <FreqConverter item={item} />;
+                break;
             default:
                 break;
         }
@@ -166,6 +168,7 @@ class App extends React.Component{
                 if(typeof func === "function"){
                     func(data);
                 }
+                return null;
             });
         }
     }
@@ -201,6 +204,7 @@ class App extends React.Component{
         if(data !== null && typeof data === "object"){
             data.map((val, ind) => {
                 byteArray[ind] = val & 0xFF;
+                return null;
             });
         }
 
@@ -240,7 +244,7 @@ class App extends React.Component{
     componentDidMount(){
 
         let items = window.Equipments.getItems();
-        if(items.length == 1){
+        if(items.length === 1){
             this.handleEquipmentSelect(items[0]);
         }
 

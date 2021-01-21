@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import React from 'react';
 
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
+// import Grid from '@material-ui/core/Grid';
+// import Typography from '@material-ui/core/Typography';
 
 
 import {AppContext} from '../AppContext';
@@ -30,15 +30,9 @@ const useStyles = theme => ({
     root: {
         '& .MuiTextField-root': {
             margin: theme.spacing(1),
-            // marginTop: theme.spacing(1),
-            // marginBottom: theme.spacing(1),
-            // width: '100%',
         },
         '& .MuiButton-root': {
             margin: theme.spacing(1),
-            // marginTop: theme.spacing(1),
-            // marginBottom: theme.spacing(1),
-            // width: '100%',
             width: '-webkit-fill-available',
         },
     },

@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import React from 'react';
 
-import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
@@ -32,18 +31,11 @@ import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 
-import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
-import CheckBoxIcon from '@material-ui/icons/CheckBox';
-
 import {AppContext} from '../AppContext';
-
-
 
 import { withStyles } from '@material-ui/core/styles';
 const useStyles = theme => ({
     arrowMove: {
-        // display: 'flex',
-        // border: '1px red solid',
         clear: 'both',
         '& > .MuiPaper-root': {
             margin: theme.spacing(1),
@@ -62,18 +54,9 @@ const useStyles = theme => ({
         '& .MuiButton-root[data-arrow="ym"]': {
             marginTop: -theme.spacing(4),
         },
-        // '& > .MuiInputBase-root': {
-        //     margin: theme.spacing(1),
-        //     width: theme.spacing(7),
-        // },
     },
     speedInput: {
         margin: theme.spacing(1),
-        // '& > .MuiInputBase-input': {
-        //     paddingLeft: theme.spacing(1),
-        //     // width: theme.spacing(7),
-
-        // },
     },
 });
 

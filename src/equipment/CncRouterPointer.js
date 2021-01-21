@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -18,11 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import React from 'react';
 
-import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Tooltip from '@material-ui/core/Tooltip';
-import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
 
 import PanToolIcon from '@material-ui/icons/PanTool';
@@ -64,7 +62,7 @@ class CncRouterPointer extends React.Component{
 
             isPanMode: false,       // режим масштабирования и навигации
 
-            zoom: 1,                // масштаб
+            zoom: 20,                // масштаб
             navLeft: 0,             // навигация, смещение слева
             navTop: 0,              // навигация, смещение сверху
 
@@ -97,25 +95,14 @@ class CncRouterPointer extends React.Component{
         if(canvas.getContext){
             this._ctx = canvas.getContext('2d');
 
-            let _ctx = this._ctx;
-
-
-            // let itemX = 0;
-            // let itemY = 0;
-            // let canvasWidth = 0;
-            // let canvasHeight = 0;
-
             const calcSize = () => {
                 let posInfo = canvas.parentNode.getBoundingClientRect();
-                // console.log(_ctx.canvas.parentNode);
-                // console.log(posInfo);
 
-                if(posInfo.width == 0 && posInfo.height == 0){
+                if(posInfo.width === 0 && posInfo.height === 0){
                     window.setTimeout(calcSize, 100);
                     return;
                 }
 
-                // console.log(posInfo);
                 let width = posInfo.width;
 
                 this.itemX = parseFloat(item.params.x);
@@ -144,10 +131,6 @@ class CncRouterPointer extends React.Component{
 
                     addListenerWsRecieve(item.name, (data) => {
                         let data2 = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-                        // console.log('CncRouterPointer', data);
-                        // console.log(WS_OBJ_NAME_COORDS, data[0], typeof WS_OBJ_NAME_COORDS, typeof data[0], data[0] === WS_OBJ_NAME_COORDS);
-                        // console.log(new Float32Array(data.slice(2, 6), 0, 4));
-                        // if(data[0] == )
                         if(data2[0] === OBJ_NAME_COORDS){
                             let x = new Float32Array(data.slice(2, 6), 0, 1)[0];
                             let y = new Float32Array(data.slice(6, 10), 0, 1)[0];
@@ -159,15 +142,11 @@ class CncRouterPointer extends React.Component{
                             this.setCurrentPointer(x, y);
                         }
                     });
-        
                 });
-
             }
 
             window.setTimeout(calcSize, 100);
-
         }
-
     }
 
     /**

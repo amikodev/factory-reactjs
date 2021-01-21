@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - prihdmitriy@yandex.ru
+Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -75,7 +75,7 @@ class CncRouterGcode extends React.Component{
             this.setState({gcodeLines: this.props.gcodeLines, countLines: this.props.gcodeLines.length});
         }
 
-        let selectedInd = this.props.currentGcodeLine;
+        // let selectedInd = this.props.currentGcodeLine;
         // console.log(this.refList.current);
         // this.refList.current.scrollToItem(selectedInd, 'center');
         // console.log(this.refList.current.scrollToItem);
@@ -104,7 +104,7 @@ class CncRouterGcode extends React.Component{
 
         const { classes } = this.props;
 
-        let _this = this;
+        // let _this = this;
 
         const renderRow = props => {
             const { index, style } = props;
