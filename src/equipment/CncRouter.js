@@ -246,7 +246,12 @@ class CncRouter extends React.Component{
         let parsed = GCode.parse(gcode);
         // console.log(parsed);
 
-        GCode.draw();
+        try{
+            GCode.draw();
+        } catch(e){
+            console.log('ERROR');
+            console.log(e);
+        }
 
     }
 

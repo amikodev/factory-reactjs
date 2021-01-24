@@ -477,7 +477,7 @@ var GCode = (function(){
                     // Это может быть точка (COMPENSATION_RADIUS_SHAPE_POINT) пересечения при угле пересечения параллельных линий менее 180 градусов
                     // или дуга окружности (COMPENSATION_RADIUS_SHAPE_CIRCLE) при угле более 180 градусов.
                     // При угле ровно 180 градусов берём точку.
-                    let shapeEndType = getCompensationConnectionShape(angle1, angle2, pParams);
+                    let shapeEndType = getCompensationConnectionShape(angle1-Math.PI, angle2, pParams);
                     shapeEnd = {type: shapeEndType};
 
                     // console.log('shape', shape);
@@ -601,9 +601,8 @@ var GCode = (function(){
                 // if(!cp2.ccw && pParams.compensationRadius.type == COMPENSATION_RIGHT)
                 if(!cp2.ccw)
                     da = -da;
-                // else if(cp2.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT)
-                //     da = -da;
-                let shapeEndType = getCompensationConnectionShape(angle1, cp2.angle1+da, pParams);
+
+                let shapeEndType = getCompensationConnectionShape(angle1-Math.PI, cp2.angle1+da, pParams);
                 shapeEnd = {type: shapeEndType};
 
                 // console.log('calcCompensationByLineCircle shape', shapeEnd);
@@ -618,71 +617,7 @@ var GCode = (function(){
                         rInc2 = -rInc2;
                     }
 
-                    // let r2 = cp2.r + rInc2;
-
-
                     p9 = calcCompensationCrossLineCircle(p4, p5, {x: cp2.xc, y: cp2.yc}, cp2.r + rInc2);
-
-                    // // уравнение прямой a*x + b*y + c = 0
-                    // // изменим параметр C с учётом того, что центр окружности считаем в начале координат
-                    // let a1 = p4.y - p5.y;
-                    // let b1 = p5.x - p4.x;
-                    // // let c1 = p4.x*p5.y - p5.x*p4.y;
-                    // let c1 = (p4.x-cp2.xc)*(p5.y-cp2.yc) - (p5.x-cp2.xc)*(p4.y-cp2.yc);
-
-
-                    // let EPS = 1.0e-3;
-
-                    // let a2b2 = a1*a1 + b1*b1;
-
-                    // let x0 = -a1*c1/a2b2;
-                    // let y0 = -b1*c1/a2b2;
-
-                    // if(c1*c1 > r2*r2*a2b2 +EPS){
-                    //     // точек нет
-                    //     console.log('lineCircle dot', 'points not exists');
-                    // } else if(Math.abs(c1*c1 - r2*r2*a2b2) < EPS){
-                    //     // одна точка
-                    //     let p12 = {
-                    //         x: x0 + cp2.xc,
-                    //         y: y0 + cp2.yc
-                    //     };
-                    //     // console.log('lineCircle dot', {p12});
-                    //     p9 = p12;
-                    // } else{
-                    //     // две точки
-                    //     let d = r2*r2 - c1*c1/a2b2;
-                    //     let mult = Math.sqrt(d / a2b2);
-                    //     let p12 = {
-                    //         x: x0 + b1 * mult + cp2.xc,
-                    //         y: y0 - a1 * mult + cp2.yc
-                    //     };
-                    //     let p13 = {
-                    //         x: x0 - b1 * mult + cp2.xc,
-                    //         y: y0 + a1 * mult + cp2.yc
-                    //     };
-                    //     // console.log('lineCircle dot', {p4, p12, p13});
-
-                    //     let dp12 = {
-                    //         dx: p4.x - p12.x,
-                    //         dy: p4.y - p12.y
-                    //     };
-                    //     let dp13 = {
-                    //         dx: p4.x - p13.x,
-                    //         dy: p4.y - p13.y
-                    //     };
-
-                    //     if(dp12.dx*dp12.dx + dp12.dy*dp12.dy < dp13.dx*dp13.dx + dp13.dy*dp13.dy){
-                    //         p9 = p12;
-                    //     } else{
-                    //         p9 = p13;
-                    //     }
-
-                    //     // console.log('lineCircle dot p9', {p9});
-
-                    // }
-                    
-
 
                 } else if(shapeEndType === COMPENSATION_RADIUS_SHAPE_CIRCLE){
 
@@ -694,21 +629,21 @@ var GCode = (function(){
                         y: pMoveParams.target.y
                     };
 
-
                     let a1 = angle1Perp;
-                    let a2 = cp2.angle1; // - Math.PI;
+                    let a2 = cp2.angle1;
+
+                    if(!cp2.ccw && pParams.compensationRadius.type == COMPENSATION_RIGHT){
+                        a2 -= Math.PI;
+                    } else if(cp2.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT){
+                        a2 += Math.PI;
+                    }
+
                     if(pParams.compensationRadius.type == COMPENSATION_RIGHT){
                         a1 += Math.PI;
-                        a2 += Math.PI;
                     }
 
                     let cdx = pParams.compensationRadius.value * Math.cos(a2);
                     let cdy = pParams.compensationRadius.value * Math.sin(a2);
-        
-                    if(pParams.compensationRadius.type == COMPENSATION_RIGHT){
-                        cdx = -cdx;
-                        cdy = -cdy;
-                    }
         
                     p10.x += cdx;
                     p10.y += cdy;
@@ -850,9 +785,13 @@ var GCode = (function(){
 
 
         const getCompensationConnectionShape = (angle1, angle2, pParams) => {
-            let dAngle = angle2 - angle1 + Math.PI;
+            // let dAngle = angle2 - (angle1 - Math.PI);
+            let dAngle = angle2 - angle1;
+            // dAngle = Math.abs(dAngle);
+
             if(dAngle > Math.PI*2) dAngle -= Math.PI*2;
             else if(dAngle < 0) dAngle += Math.PI*2;
+            // if(dAngle < 0) dAngle = Math.abs(dAngle);
 
             let shapeEndType = COMPENSATION_RADIUS_SHAPE_NONE;
             if(pParams.compensationRadius.type == COMPENSATION_LEFT){
@@ -863,12 +802,13 @@ var GCode = (function(){
                 else if(dAngle > Math.PI) shapeEndType = COMPENSATION_RADIUS_SHAPE_CIRCLE;
             }
 
-            // console.log('getCompensationConnectionShape', {
-            //     angle1:angle1*180/Math.PI, 
-            //     angle2:angle2*180/Math.PI, 
-            //     dAngle:dAngle*180/Math.PI,
-            //     shapeEndType
-            // });
+            console.log('getCompensationConnectionShape', {
+                p10:progParams.compensationLastPoint,
+                angle1:angle1*180/Math.PI, 
+                angle2:angle2*180/Math.PI, 
+                dAngle:dAngle*180/Math.PI,
+                shapeEndType
+            });
 
 
             return shapeEndType;
@@ -901,7 +841,7 @@ var GCode = (function(){
                 y: cp.yc + pParams.userZeroPoint.Y
             };
 
-            // console.log('circle', cp);
+            console.log('circle', cp, {angle1:cp.angle1*180/Math.PI, angle2:cp.angle2*180/Math.PI});
 
             let compensationFunc = null;
 
@@ -989,7 +929,18 @@ var GCode = (function(){
                 // Это может быть точка (COMPENSATION_RADIUS_SHAPE_POINT) пересечения при угле пересечения параллельных линий менее 180 градусов
                 // или дуга окружности (COMPENSATION_RADIUS_SHAPE_CIRCLE) при угле более 180 градусов.
                 // При угле ровно 180 градусов берём точку.
-                let shapeEndType = getCompensationConnectionShape(cp.angle2, cp2.angle1, pParams);
+                let da1 = Math.PI/2;
+                if(cp.ccw){
+                    da1 = -da1;
+                }
+                let da2 = Math.PI/2;
+                if(!cp2.ccw){
+                    da2 = -da2;
+                }
+
+                // if(cp2.angle1 < 0) cp2.angle1 += Math.PI*2;
+
+                let shapeEndType = getCompensationConnectionShape(cp.angle2+da1, cp2.angle1+da2, pParams);
                 shapeEnd = {type: shapeEndType};
                 // console.log({shapeEndType});
                 if(shapeEndType === COMPENSATION_RADIUS_SHAPE_POINT){
@@ -1255,16 +1206,18 @@ var GCode = (function(){
                 // Это может быть точка (COMPENSATION_RADIUS_SHAPE_POINT) пересечения при угле пересечения параллельных линий менее 180 градусов
                 // или дуга окружности (COMPENSATION_RADIUS_SHAPE_CIRCLE) при угле более 180 градусов.
                 // При угле ровно 180 градусов берём точку.
-                let da = 0;
-                if(!cp.ccw){
-                    da -= Math.PI;
+                let da = Math.PI/2;
+                if(cp.ccw){
+                    da = -da;
                 }
                 let shapeEndType = getCompensationConnectionShape(cp.angle2+da, angle2, pParams);
                 shapeEnd = {type: shapeEndType};
                 // console.log({shapeEndType});
                 if(shapeEndType === COMPENSATION_RADIUS_SHAPE_POINT){
 
+                    // console.log({p7, p6, cp, rInc});
                     p10 = calcCompensationCrossLineCircle(p7, p6, {x: cp.xc, y: cp.yc}, cp.r + rInc);
+                    // console.log({p10});
 
                     let dxc2 = p10.x - cp.xc;
                     let dyc2 = p10.y - cp.yc;
@@ -1281,7 +1234,6 @@ var GCode = (function(){
 
                 } else if(shapeEndType === COMPENSATION_RADIUS_SHAPE_CIRCLE){
 
-
                     circle = {
                         a1: angle1,
                         a2: cp.angle2,
@@ -1289,33 +1241,25 @@ var GCode = (function(){
                     };
 
                     p10 = {
-                        x: p2.x, //pMoveParams.target.x,
-                        y: p2.y, //pMoveParams.target.y
+                        x: p2.x,
+                        y: p2.y,
                     };
 
-                    let a1 = cp.angle2; // + Math.PI;
+                    let a1 = cp.angle2;
                     let a2 = angle2Perp;
-                    // if(pParams.compensationRadius.type == COMPENSATION_RIGHT){
-                    if(!cp.ccw){
-                        a1 += Math.PI;
-                        a2 += Math.PI;
-                    }
 
-                    if(pParams.compensationRadius.type == COMPENSATION_LEFT){
+                    if(!cp.ccw && pParams.compensationRadius.type == COMPENSATION_RIGHT){
+                        a1 += Math.PI;
+                    } else if(cp.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT){
                         a1 -= Math.PI;
                     }
+
                     if(pParams.compensationRadius.type == COMPENSATION_RIGHT){
                         a2 -= Math.PI;
-                    }
-
+                    }                    
 
                     let cdx = pParams.compensationRadius.value * Math.cos(a2);
                     let cdy = pParams.compensationRadius.value * Math.sin(a2);
-        
-                    if(pParams.compensationRadius.type == COMPENSATION_RIGHT){
-                        // cdx = -cdx;
-                        // cdy = -cdy;
-                    }
         
                     p10.x += cdx;
                     p10.y += cdy;
@@ -1326,9 +1270,7 @@ var GCode = (function(){
                         radius: pParams.compensationRadius.value,
                     };
 
-
-
-
+                    // console.log('shapeEnd', {p10, a1:a1*180/Math.PI, a2:a2*180/Math.PI});
                 } else if(shapeEndType === COMPENSATION_RADIUS_SHAPE_NONE){
 
                 }
@@ -1425,77 +1367,6 @@ var GCode = (function(){
             let ccw = pParams.runType === RUN_WORK_CCW;
             return {xc, yc, r, angle1, angle2, ccw};
         }
-
-        // const calcCircleByRadius = (targetX, targetY) => {
-         
-        //     let x1 = progParams.currentCoord.X;
-        //     let y1 = progParams.currentCoord.Y;
-        //     let x2 = targetX;
-        //     let y2 = targetY;
-        //     let dx = x2-x1;
-        //     let dy = y2-y1;
-        //     let r = progParams.circle.radius;
-        //     // let r = progParams.radius;
-
-        //     let radiusPositive = r >= 0;
-        //     r = Math.abs(r);
-
-        //     let d = Math.sqrt(dx*dx+dy*dy);
-        //     let h = Math.sqrt(r*r-(d/2)*(d/2));
-
-        //     let xc1 = x1 + dx/2 + h*dy / d;
-        //     let yc1 = y1 + dy/2 - h*dx / d;
-
-        //     let xc2 = x1 + dx/2 - h*dy / d;
-        //     let yc2 = y1 + dy/2 + h*dx / d;
-
-
-        //     let xc = xc2;
-        //     let yc = yc2;
-
-        //     if( (progParams.runType == RUN_WORK_CW && radiusPositive) || (progParams.runType == RUN_WORK_CCW && !radiusPositive) ){
-        //         xc = xc1;
-        //         yc = yc1;
-        //     }
-
-        //     let dxc1 = x1-xc;
-        //     let dyc1 = y1-yc;
-        //     let dxc2 = x2-xc;
-        //     let dyc2 = y2-yc;
-
-        //     let angle1 = Math.atan2(dyc1, dxc1);
-        //     let angle2 = Math.atan2(dyc2, dxc2);
-
-        //     let ccw = progParams.runType === RUN_WORK_CCW;
-        //     return {xc, yc, r, angle1, angle2, ccw};
-        // }
-
-        // const calcCircleByInc = (targetX, targetY) => {
-
-        //     let x1 = progParams.currentCoord.X;
-        //     let y1 = progParams.currentCoord.Y;
-        //     let x2 = targetX;
-        //     let y2 = targetY;
-
-        //     let incI = progParams.circle.inc.I;
-        //     let incJ = progParams.circle.inc.J;
-
-        //     let xc = progParams.currentCoord.X + incI;
-        //     let yc = progParams.currentCoord.Y + incJ;
-
-        //     let r = Math.sqrt(incI*incI + incJ*incJ);
-
-        //     let dxc1 = x1-xc;
-        //     let dyc1 = y1-yc;
-        //     let dxc2 = x2-xc;
-        //     let dyc2 = y2-yc;
-
-        //     let angle1 = Math.atan2(dyc1, dxc1);
-        //     let angle2 = Math.atan2(dyc2, dxc2);
-
-        //     let ccw = progParams.runType === RUN_WORK_CCW;
-        //     return {xc, yc, r, angle1, angle2, ccw};
-        // }
 
 
         const recalcCoords = (targetX, targetY) => {
