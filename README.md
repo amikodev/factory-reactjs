@@ -4,10 +4,10 @@
 # Панель управления промышленным оборудованием на ReactJS
 
 ## Настройка
-Скачать [VSCode](https://code.visualstudio.com/download)
-Установить [Platformio IDE for VSCode](https://platformio.org/install/ide?install=vscode)
-Изучить [основы работы Platformio](https://docs.platformio.org/en/latest/integration/ide/vscode.html#quick-start)
-Скачать [NodeJS](https://nodejs.org/en/)
+* Скачать [VSCode](https://code.visualstudio.com/download)
+* Установить [Platformio IDE for VSCode](https://platformio.org/install/ide?install=vscode)
+* Изучить [основы работы Platformio](https://docs.platformio.org/en/latest/integration/ide/vscode.html#quick-start)
+* Скачать [NodeJS](https://nodejs.org/en/)
 
 ## Структура проекта
 ```

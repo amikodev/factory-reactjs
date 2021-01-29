@@ -744,6 +744,55 @@ var GCode = (function(){
             return crossPoint;
         }
 
+        /**
+         * Поиск точек пересечения двух окружностей
+         * @param pc1 центр первой окружности
+         * @param r1 радиус первой окружности
+         * @param pc2 центр второй окружности
+         * @param r2 радиус второй окружности
+         */
+        const calcCompensationCrossCircleCircle = (pc1, r1, pc2, r2) => {
+            
+            let dx = pc2.x-pc1.x;
+            let dy = pc2.y-pc1.y;
+            let d_2 = dx*dx + dy*dy;
+            let d_2s = Math.sqrt(d_2);
+            let a = (r1*r1 - r2*r2 + d_2)/(2*d_2s);
+            let h = Math.sqrt(r1*r1 - a*a);
+
+            let p0 = {
+                x: pc1.x + a/d_2s*(pc2.x - pc1.x),
+                y: pc1.y + a/d_2s*(pc2.y - pc1.y)
+            };
+            // let x3 = cp.xc + a/d_2s*(cp2.xc - cp.xc);
+            // let y3 = cp.yc + a/d_2s*(cp2.yc - cp.yc);
+
+            let tpx = h/d_2s*dy;
+            let tpy = h/d_2s*dx;
+            
+            let p1 = {
+                x: p0.x + tpx,
+                y: p0.y - tpy
+            };
+            let p2 = {
+                x: p0.x - tpx,
+                y: p0.y + tpy
+            };
+
+            // let x4 = x3 + tpx;
+            // let y4 = y3 - tpy;
+            // let x5 = x3 - tpx;
+            // let y5 = y3 + tpy;
+
+            // console.log('пересечение', {x4, y4, x5, y5});
+
+            let angle1 = Math.atan2(p1.y-pc1.y, p1.x-pc1.x);
+            let angle2 = Math.atan2(p2.y-pc1.y, p2.x-pc1.x);
+
+
+            return {p0, p1, p2, angle1, angle2};
+        }
+
 
         /**
          * Рассчёт параллельной линии
@@ -787,9 +836,11 @@ var GCode = (function(){
         const getCompensationConnectionShape = (angle1, angle2, pParams) => {
             // let dAngle = angle2 - (angle1 - Math.PI);
             let dAngle = angle2 - angle1;
+            // if(angle2 > angle1) dAngle = angle1 - angle2;
             // dAngle = Math.abs(dAngle);
 
-            if(dAngle > Math.PI*2) dAngle -= Math.PI*2;
+            if(dAngle >= Math.PI*2) dAngle -= Math.PI*2;
+            else if(dAngle <= -Math.PI*2) dAngle = Math.abs(dAngle);
             else if(dAngle < 0) dAngle += Math.PI*2;
             // if(dAngle < 0) dAngle = Math.abs(dAngle);
 
@@ -801,6 +852,8 @@ var GCode = (function(){
                 if(dAngle < Math.PI) shapeEndType = COMPENSATION_RADIUS_SHAPE_POINT;
                 else if(dAngle > Math.PI) shapeEndType = COMPENSATION_RADIUS_SHAPE_CIRCLE;
             }
+
+            // console.log('angle2 > angle1', angle2 > angle1);
 
             console.log('getCompensationConnectionShape', {
                 p10:progParams.compensationLastPoint,
@@ -814,6 +867,7 @@ var GCode = (function(){
             return shapeEndType;
         }
 
+        let debugCircleCount = 0;
         const drawCircle = (pMoveParams, pMoveNextParams, cp) => {
             let dash = [];
 
@@ -841,7 +895,7 @@ var GCode = (function(){
                 y: cp.yc + pParams.userZeroPoint.Y
             };
 
-            console.log('circle', cp, {angle1:cp.angle1*180/Math.PI, angle2:cp.angle2*180/Math.PI});
+            console.log('circle', ++debugCircleCount, cp, {angle1:cp.angle1*180/Math.PI, angle2:cp.angle2*180/Math.PI});
 
             let compensationFunc = null;
 
@@ -867,38 +921,39 @@ var GCode = (function(){
                 let { circle, p10, side, shapeEnd } = compensationFunc(pMoveParams, pMoveNextParams, p1, p2, p3, pc, cp);
                 if(circle !== null){
                     // console.log('comp circle', circle);
-                    _ctx.beginPath();
-                    _ctx.arc(pc.x*_zoom+_navLeft, pc.y*_zoom+_navTop, (circle.radius)*_zoom, circle.a1, circle.a2, !cp.ccw);
-                    _ctx.strokeStyle = side == COMPENSATION_LEFT ? "#800" : "#080";
-                    _ctx.setLineDash([1, 4]);
-                    _ctx.stroke();
-
-                    if(shapeEnd !== null && shapeEnd.type === COMPENSATION_RADIUS_SHAPE_CIRCLE){
-                        const { circle } = shapeEnd;
-                        // console.log({shapeEnd});
+                    if(circle.radius > 0){
                         _ctx.beginPath();
-                        _ctx.arc(p2.x*_zoom+_navLeft, p2.y*_zoom+_navTop, (circle.radius)*_zoom, circle.a1, circle.a2, side == COMPENSATION_LEFT);
+                        _ctx.arc(pc.x*_zoom+_navLeft, pc.y*_zoom+_navTop, (circle.radius)*_zoom, circle.a1, circle.a2, !cp.ccw);
+                        _ctx.strokeStyle = side == COMPENSATION_LEFT ? "#800" : "#080";
                         _ctx.setLineDash([1, 4]);
                         _ctx.stroke();
-            
-                        // // точка
-                        // _ctx.beginPath();
-                        // _ctx.arc(p10.x*_zoom+_navLeft, p10.y*_zoom+_navTop, 2, 0, Math.PI*2, false);
-                        // _ctx.fillStyle = "#080";
-                        // _ctx.fill();
+                    
+                        if(shapeEnd !== null && shapeEnd.type === COMPENSATION_RADIUS_SHAPE_CIRCLE){
+                            const { circle } = shapeEnd;
+                            // console.log({shapeEnd});
+                            _ctx.beginPath();
+                            _ctx.arc(p2.x*_zoom+_navLeft, p2.y*_zoom+_navTop, (circle.radius)*_zoom, circle.a1, circle.a2, side == COMPENSATION_LEFT);
+                            _ctx.setLineDash([1, 4]);
+                            _ctx.stroke();
+                
+                            // // точка
+                            // _ctx.beginPath();
+                            // _ctx.arc(p10.x*_zoom+_navLeft, p10.y*_zoom+_navTop, 2, 0, Math.PI*2, false);
+                            // _ctx.fillStyle = "#080";
+                            // _ctx.fill();
 
-                        progParams.compensationLastPoint = p10;
-                    } else{
-                        // progParams.compensationLastPoint = p9;
-                        // // точка
-                        // _ctx.beginPath();
-                        // _ctx.arc(p10.x*_zoom+_navLeft, p10.y*_zoom+_navTop, 2, 0, Math.PI*2, false);
-                        // _ctx.fillStyle = "#080";
-                        // _ctx.fill();
+                            progParams.compensationLastPoint = p10;
+                        } else{
+                            // progParams.compensationLastPoint = p9;
+                            // // точка
+                            // _ctx.beginPath();
+                            // _ctx.arc(p10.x*_zoom+_navLeft, p10.y*_zoom+_navTop, 2, 0, Math.PI*2, false);
+                            // _ctx.fillStyle = "#080";
+                            // _ctx.fill();
 
-                        progParams.compensationLastPoint = p10;
+                            progParams.compensationLastPoint = p10;
+                        }
                     }
-
 
 
 
@@ -938,9 +993,61 @@ var GCode = (function(){
                     da2 = -da2;
                 }
 
+
+
+
+                /*
+                // 
+                let rInc = pParams.compensationRadius.value;
+                if(!cp.ccw && pParams.compensationRadius.type == COMPENSATION_RIGHT){
+                    rInc = -rInc;
+                } else if(cp.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT){
+                    rInc = -rInc;
+                }
+                circle = {
+                    a1: cp.angle1,
+                    a2: cp.angle2,
+                    radius: cp.r + rInc,
+                };
+                p10 = p2;
+                // let shapeEndType = COMPENSATION_RADIUS_SHAPE_NONE;
+                shapeEnd = {type: COMPENSATION_RADIUS_SHAPE_NONE};
+                return {circle, p10, side: compensationSide, shapeEnd};
+                */
+
+
+
+
+
+
+
                 // if(cp2.angle1 < 0) cp2.angle1 += Math.PI*2;
 
+                // let a1 = cp.angle2+da1;
+                // let a2 = cp2.angle1+da2;
+                // if(a2 > a1){
+                //     let at = a1;
+                //     a1 = a2;
+                //     a2 = at;
+                // }
+
+                // let shapeEndType = getCompensationConnectionShape(a1, a2, pParams);
+
                 let shapeEndType = getCompensationConnectionShape(cp.angle2+da1, cp2.angle1+da2, pParams);
+
+                // if(!cp.ccw && !cp2.ccw && cp.angle2+da1 < cp2.angle1+da2 && shapeEndType === COMPENSATION_RADIUS_SHAPE_CIRCLE){
+                //     shapeEndType = COMPENSATION_RADIUS_SHAPE_POINT;
+                // }
+                // if(cp.ccw && cp2.ccw && cp.angle2+da1 > cp2.angle1+da2 && shapeEndType === COMPENSATION_RADIUS_SHAPE_CIRCLE){
+                //     shapeEndType = COMPENSATION_RADIUS_SHAPE_POINT;
+                // }
+                // if(cp.ccw && cp2.ccw && cp.angle2+da1 < 0 && cp2.angle1+da2 > 0 && shapeEndType === COMPENSATION_RADIUS_SHAPE_POINT){
+                //     shapeEndType = COMPENSATION_RADIUS_SHAPE_CIRCLE;
+                // }
+                // if(!cp.ccw && !cp2.ccw && cp.angle2+da1 > 0 && cp2.angle1+da2 < 0 && shapeEndType === COMPENSATION_RADIUS_SHAPE_POINT){
+                //     shapeEndType = COMPENSATION_RADIUS_SHAPE_CIRCLE;
+                // }
+
                 shapeEnd = {type: shapeEndType};
                 // console.log({shapeEndType});
                 if(shapeEndType === COMPENSATION_RADIUS_SHAPE_POINT){
@@ -965,7 +1072,7 @@ var GCode = (function(){
                         // console.log({progParams});
                     let dxc1 = lp.x - pointCenter.x;
                     let dyc1 = lp.y - pointCenter.y;
-                    let angle1 = Math.atan2(dyc1, dxc1);
+                    let angleLp = Math.atan2(dyc1, dxc1);
 
 
                     
@@ -982,59 +1089,73 @@ var GCode = (function(){
                     let r1 = cp.r + rInc;
                     let r2 = cp2.r + rInc2;
 
-                    let dx = cp2.xc-cp.xc;
-                    let dy = cp2.yc-cp.yc
-                    let d_2 = dx*dx + dy*dy;
-                    let d_2s = Math.sqrt(d_2);
-                    let a = (r1*r1 - r2*r2 + d_2)/(2*d_2s);
-                    let h = Math.sqrt(r1*r1 - a*a);
-                    let p11 = {
-                        x: cp.xc + a/d_2s*(cp2.xc - cp.xc),
-                        y: cp.yc + a/d_2s*(cp2.yc - cp.yc)
-                    };
-                    // let x3 = cp.xc + a/d_2s*(cp2.xc - cp.xc);
-                    // let y3 = cp.yc + a/d_2s*(cp2.yc - cp.yc);
+                    let { p0, p1, p2, angle1, angle2 } = calcCompensationCrossCircleCircle({x: cp.xc, y: cp.yc}, r1, {x: cp2.xc, y: cp2.yc}, r2);
 
-                    let tpx = h/d_2s*dy;
-                    let tpy = h/d_2s*dx;
+                    // let dx = cp2.xc-cp.xc;
+                    // let dy = cp2.yc-cp.yc
+                    // let d_2 = dx*dx + dy*dy;
+                    // let d_2s = Math.sqrt(d_2);
+                    // let a = (r1*r1 - r2*r2 + d_2)/(2*d_2s);
+                    // let h = Math.sqrt(r1*r1 - a*a);
+                    // let p11 = {
+                    //     x: cp.xc + a/d_2s*(cp2.xc - cp.xc),
+                    //     y: cp.yc + a/d_2s*(cp2.yc - cp.yc)
+                    // };
+                    // // let x3 = cp.xc + a/d_2s*(cp2.xc - cp.xc);
+                    // // let y3 = cp.yc + a/d_2s*(cp2.yc - cp.yc);
+
+                    // let tpx = h/d_2s*dy;
+                    // let tpy = h/d_2s*dx;
                     
-                    let p12 = {
-                        x: p11.x + tpx,
-                        y: p11.y - tpy
-                    };
-                    let p13 = {
-                        x: p11.x - tpx,
-                        y: p11.y + tpy
-                    };
+                    // let p12 = {
+                    //     x: p11.x + tpx,
+                    //     y: p11.y - tpy
+                    // };
+                    // let p13 = {
+                    //     x: p11.x - tpx,
+                    //     y: p11.y + tpy
+                    // };
 
-                    // let x4 = x3 + tpx;
-                    // let y4 = y3 - tpy;
-                    // let x5 = x3 - tpx;
-                    // let y5 = y3 + tpy;
+                    // // let x4 = x3 + tpx;
+                    // // let y4 = y3 - tpy;
+                    // // let x5 = x3 - tpx;
+                    // // let y5 = y3 + tpy;
 
-                    // console.log('пересечение', {x4, y4, x5, y5});
+                    // // console.log('пересечение', {x4, y4, x5, y5});
 
-                    let angle12 = Math.atan2(p12.y-cp.yc, p12.x-cp.xc);
-                    let angle13 = Math.atan2(p13.y-cp.yc, p13.x-cp.xc);
+                    // let angle12 = Math.atan2(p12.y-cp.yc, p12.x-cp.xc);
+                    // let angle13 = Math.atan2(p13.y-cp.yc, p13.x-cp.xc);
 
                     // let angle4 = Math.atan2(y4-cp.yc, x4-cp.xc);
                     // let angle5 = Math.atan2(y5-cp.yc, x5-cp.xc);
 
-                    let da12 = Math.abs(cp.angle2 - angle12);
-                    let da13 = Math.abs(cp.angle2 - angle13);
+                    let da1 = Math.abs(cp.angle2 - angle1);
+                    let da2 = Math.abs(cp.angle2 - angle2);
 
                     // let da4 = Math.abs(cp.angle2-angle4);
                     // let da5 = Math.abs(cp.angle2-angle5);
 
 
-                    let angle2 = 0;
-                    if(da12 < da13){
-                        angle2 = angle12;
-                        p10 = p12;                        
+                    let angle3 = 0;
+                    // console.log();
+                    if(da1 < da2){
+                        angle3 = angle1;
+                        p10 = p1;                        
                     } else{
-                        angle2 = angle13;
-                        p10 = p13;
+                        angle3 = angle2;
+                        p10 = p2;
                     }
+
+                    // if(!cp.ccw && !cp2.ccw && cp.angle2+da1 < cp2.angle1+da2){
+                    //     if(da1 > da2){
+                    //         angle3 = angle1;
+                    //         p10 = p1;                        
+                    //     } else{
+                    //         angle3 = angle2;
+                    //         p10 = p2;
+                    //     }
+                    // }
+
 
                     // let angle2 = da4 < da5 ? da4 : da4;
 
@@ -1056,10 +1177,28 @@ var GCode = (function(){
 
 
                     circle = {
-                        a1: angle1,
-                        a2: angle2,
+                        a1: angleLp,
+                        a2: angle3,
                         radius: cp.r + rInc,
                     };
+
+                    console.log('CircleCircle point circle', {
+                        a1:circle.a1*180/Math.PI,
+                        a2:circle.a2*180/Math.PI,
+                        radius:circle.radius,
+                        da1:da1*180/Math.PI, 
+                        da2:da2*180/Math.PI, 
+                        cp_angle2:cp.angle2*180/Math.PI,
+                        angle1:angle1*180/Math.PI, 
+                        angle2:angle2*180/Math.PI,
+                    });
+
+                    if(isNaN(circle.a2)){
+                        console.log('ERROR', {
+                            angle1, angle2, p1, p2, cp, p0, r1, r2
+                        });
+                    }
+
 
                     // p10 = {
                     //     x: p2.x,
@@ -1122,6 +1261,14 @@ var GCode = (function(){
                         a1 -= Math.PI;
                     }
 
+                    if(cp2.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT){
+                        a2 -= Math.PI;
+                    }
+
+                    if(!cp.ccw && cp2.ccw){
+                        a2 -= Math.PI;
+                    }
+
 
                     let cdx = pParams.compensationRadius.value * Math.cos(a2);
                     let cdy = pParams.compensationRadius.value * Math.sin(a2);
@@ -1140,12 +1287,69 @@ var GCode = (function(){
                         radius: pParams.compensationRadius.value,
                     };
 
-                    // console.log('shapeEnd.circle', a1/Math.PI*180, a2/Math.PI*180, p10);
+                    console.log('shapeEnd.circle', {a1:a1/Math.PI*180, a2:a2/Math.PI*180, p10});
 
 
 
 
                 } else if(shapeEndType === COMPENSATION_RADIUS_SHAPE_NONE){
+
+                    let rInc = pParams.compensationRadius.value;
+                    if(!cp.ccw && pParams.compensationRadius.type == COMPENSATION_RIGHT){
+                        rInc = -rInc;
+                    } else if(cp.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT){
+                        rInc = -rInc;
+                    }
+
+                    let lp = progParams.compensationLastPoint;
+                    if(lp === null){
+                        let cdx = pParams.compensationRadius.value * Math.cos(cp.angle1);
+                        let cdy = pParams.compensationRadius.value * Math.sin(cp.angle1);
+                        lp = {
+                            x: p1.x + cdx,
+                            y: p1.y + cdy
+                        };
+                    }
+                        // console.log({progParams});
+                    let dxc1 = lp.x - pointCenter.x;
+                    let dyc1 = lp.y - pointCenter.y;
+                    let angle1 = Math.atan2(dyc1, dxc1);
+
+
+                    circle = {
+                        a1: angle1,
+                        a2: cp.angle2,
+                        radius: cp.r + rInc,
+                    };
+
+                    p10 = {
+                        x: p2.x, //pMoveParams.target.x,
+                        y: p2.y, //pMoveParams.target.y
+                    };
+
+                    let a2 = cp2.angle1;
+
+                    if(!cp.ccw){
+                        a2 += Math.PI;
+                    }
+
+                    if(cp2.ccw && pParams.compensationRadius.type == COMPENSATION_LEFT){
+                        a2 -= Math.PI;
+                    }
+
+
+                    let cdx = pParams.compensationRadius.value * Math.cos(a2);
+                    let cdy = pParams.compensationRadius.value * Math.sin(a2);
+        
+                    if(pParams.compensationRadius.type == COMPENSATION_RIGHT){
+                        // cdx = -cdx;
+                        // cdy = -cdy;
+                    }
+        
+                    p10.x += cdx;
+                    p10.y += cdy;
+
+                    // console.log('shapeEnd.none', a1/Math.PI*180, a2/Math.PI*180, p10);
 
                 }
 
@@ -1301,7 +1505,6 @@ var GCode = (function(){
             let dx = x2-x1;
             let dy = y2-y1;
             let r = pParams.circle.radius;
-            // let r = progParams.radius;
 
             let radiusPositive = r >= 0;
             r = Math.abs(r);
@@ -1333,6 +1536,27 @@ var GCode = (function(){
             let angle2 = Math.atan2(dyc2, dxc2);
 
             let ccw = pParams.runType === RUN_WORK_CCW;
+
+            // if(!ccw){
+            //     if(angle1 < 0){
+            //         angle1 += Math.PI*2;
+            //     }
+
+            // } else{
+            //     if(angle2 < 0){
+            //         angle2 += Math.PI*2;
+            //         if(angle1 < 0){
+            //             angle1 += Math.PI*2;
+            //         }
+            //     }
+            // }
+
+            // if(!ccw && angle1 < 0){
+            //     angle1 += Math.PI*2;
+            // } else if(ccw && angle2 < 0){
+            //     angle2 += Math.PI*2;
+            // }
+
             return {xc, yc, r, angle1, angle2, ccw};
         }
 
