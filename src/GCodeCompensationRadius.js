@@ -152,7 +152,9 @@ var GCodeCompensationRadius = (function(){
         r = Math.abs(r);
 
         let d = Math.sqrt(dx*dx+dy*dy);
-        let h = Math.sqrt(r*r-(d/2)*(d/2)+EPS);
+        let drd = r*r-(d/2)*(d/2);
+        if(drd < EPS) drd = 0;
+        let h = Math.sqrt(drd);
 
         let xc1 = x1 + dx/2 + h*dy / d;
         let yc1 = y1 + dy/2 - h*dx / d;
@@ -198,7 +200,7 @@ var GCodeCompensationRadius = (function(){
         let angle1 = Math.atan2(y1-yc, x1-xc);
         let angle2 = Math.atan2(y2-yc, x2-xc);
 
-        return {xc, yc, r, angle1, angle2, ccw};
+        return {center: {x: xc, y: yc}, r, angle1, angle2, ccw};
     }
     
     /**
@@ -504,6 +506,7 @@ var GCodeCompensationRadius = (function(){
         pointsIsEqual,                  // Определение являются ли две точки с одними координатами
 
         setCanvasContext,               // Установка контекста canvas
+        drawPoint,                      // Рисование точки
 
     };
 })();

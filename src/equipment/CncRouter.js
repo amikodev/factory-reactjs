@@ -448,8 +448,7 @@ class CncRouter extends React.Component{
 
     handlePointerReady(){
         let zoom = 20;
-        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom() * zoom);
-        // GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom()*20);
+        this.refCncRouterPointer.current.setZoom(zoom);
     }
 
     handlePointerChangeZoom(zoom){

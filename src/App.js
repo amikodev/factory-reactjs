@@ -130,7 +130,7 @@ class App extends React.Component{
             if(autoChangeTab)
                 this.mainMenuRef.current.changeTab(TAB_EQUIPMENT);
 
-            console.log(component);
+            // console.log(component);
         });
     }
 
