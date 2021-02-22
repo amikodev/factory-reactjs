@@ -447,7 +447,7 @@ class CncRouter extends React.Component{
     }
 
     handlePointerReady(){
-        let zoom = 20;
+        let zoom = 2; // 20;
         this.refCncRouterPointer.current.setZoom(zoom);
     }
 

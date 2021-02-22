@@ -73,7 +73,7 @@ class CncRouterPlasmaArc extends React.Component{
         // listenerInd = addListenerWsRecieve(item.name, data => {
         addListenerWsRecieve(item.name, data => {
             data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-            console.log('Plasma arc data', data);
+            // console.log('Plasma arc data', data);
             if(data[0] === OBJ_NAME_PLASMA_ARC){
                 if(data[1] === PLASMA_ARC_START){
                     this.setState({doStartRunned: false});

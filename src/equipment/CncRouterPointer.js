@@ -138,8 +138,10 @@ class CncRouterPointer extends React.Component{
                             let z = new Float32Array(data.slice(10, 14), 0, 1)[0];
                             // console.log(x, y, z);
                             console.log( parseInt(x*1e4)/1e4, parseInt(y*1e4)/1e4, parseInt(z*1e4)/1e4);
-                            x = parseInt(x);
-                            y = parseInt(y);
+                            // x = parseInt(x);
+                            // y = parseInt(y);
+                            x = x.toFixed(2);
+                            y = y.toFixed(2);
                             this.setCurrentPointer(x, y);
                         }
                     });
@@ -272,6 +274,24 @@ class CncRouterPointer extends React.Component{
 
     /**
      * Режим масштабирования и навигации.
+     * Опускание клавиши мышки.
+     */
+    handlePanMouseDown(event){
+        // console.log(event.clientX, event.pageX, event.screenX, event);
+        let oX = event.nativeEvent.offsetX;
+        let oY = event.nativeEvent.offsetY;
+
+        this.navX = oX;
+        this.navY = oY;
+
+        this.navEnable = true;
+        // console.log(oX, oY);
+
+
+    }
+
+    /**
+     * Режим масштабирования и навигации.
      * Перемещение мышкой.
      */
     handlePanMouseMove(event){
@@ -290,11 +310,18 @@ class CncRouterPointer extends React.Component{
             //         this.props.onChangeNav(navLeft+dx, navTop+dy);
             //     }
             // });
+            const { device } = this.state.currentPointer;
+            // this.setCurrentPointer(device.x, device.y);
 
             if(typeof this.props.onChangeNav === "function"){
                 this.props.onChangeNav(navLeft+dx, navTop-dy);
             }
 
+            this.setState({navLeft: navLeft+dx, navTop: navTop-dy}, () => {
+                this.navX += dx;
+                this.navY += dy;
+                this.setCurrentPointer(device.x, device.y);
+        });
 
         }
     }
@@ -339,24 +366,6 @@ class CncRouterPointer extends React.Component{
         this.setState({navLeft: navLeft+dx, navTop: navTop-dy});
 
         this.navEnable = false;
-
-    }
-
-    /**
-     * Режим масштабирования и навигации.
-     * Опускание клавиши мышки.
-     */
-    handlePanMouseDown(event){
-        // console.log(event.clientX, event.pageX, event.screenX, event);
-        let oX = event.nativeEvent.offsetX;
-        let oY = event.nativeEvent.offsetY;
-
-        this.navX = oX;
-        this.navY = oY;
-
-        this.navEnable = true;
-        // console.log(oX, oY);
-
 
     }
 
