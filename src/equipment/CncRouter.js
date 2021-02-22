@@ -246,7 +246,12 @@ class CncRouter extends React.Component{
         let parsed = GCode.parse(gcode);
         // console.log(parsed);
 
-        GCode.draw();
+        try{
+            GCode.draw();
+        } catch(e){
+            console.log('ERROR');
+            console.log(e);
+        }
 
     }
 
@@ -443,8 +448,7 @@ class CncRouter extends React.Component{
 
     handlePointerReady(){
         let zoom = 20;
-        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom() * zoom);
-        // GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom()*20);
+        this.refCncRouterPointer.current.setZoom(zoom);
     }
 
     handlePointerChangeZoom(zoom){

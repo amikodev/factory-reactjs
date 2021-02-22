@@ -47,6 +47,7 @@ class CncRouterPointer extends React.Component{
         this.setSelectedPointer = this.setSelectedPointer.bind(this);
         this.getCanvasRef = this.getCanvasRef.bind(this);
         this.calcCanvasZoom = this.calcCanvasZoom.bind(this);
+        this.setZoom = this.setZoom.bind(this);
 
         this.state = {
 
@@ -62,7 +63,7 @@ class CncRouterPointer extends React.Component{
 
             isPanMode: false,       // режим масштабирования и навигации
 
-            zoom: 20,                // масштаб
+            zoom: 1,                // масштаб
             navLeft: 0,             // навигация, смещение слева
             navTop: 0,              // навигация, смещение сверху
 
@@ -223,8 +224,11 @@ class CncRouterPointer extends React.Component{
         let odX = oX - this.state.navLeft;
         let odY = oY + this.state.navTop;
 
-        let mouseDeviceX = odX > 0 ? odX/this.canvasWidth*this.itemX : 0;
-        let mouseDeviceY = odY > 0 ? odY/this.canvasHeight*this.itemY : 0;
+        // let mouseDeviceX = odX > 0 ? odX/this.canvasWidth*this.itemX : 0;
+        // let mouseDeviceY = odY > 0 ? odY/this.canvasHeight*this.itemY : 0;
+
+        let mouseDeviceX = odX/this.canvasWidth*this.itemX;
+        let mouseDeviceY = odY/this.canvasHeight*this.itemY;
 
 
         mouseDeviceY = this.itemY - mouseDeviceY;       // ноль в левом нижнем углу
@@ -234,8 +238,10 @@ class CncRouterPointer extends React.Component{
         mouseDeviceX /= this.state.zoom;
         mouseDeviceY /= this.state.zoom;
 
-        mouseDeviceX = parseInt(mouseDeviceX);
-        mouseDeviceY = parseInt(mouseDeviceY);
+        // mouseDeviceX = parseInt(mouseDeviceX);
+        // mouseDeviceY = parseInt(mouseDeviceY);
+        mouseDeviceX = mouseDeviceX.toFixed(3);
+        mouseDeviceY = mouseDeviceY.toFixed(3);
 
         mousePointer.offset = {x: oX, y: oY};
         mousePointer.screen = {x: oX+50, y: oY+30};
@@ -418,11 +424,22 @@ class CncRouterPointer extends React.Component{
     }
 
     /**
+     * Установка масштаба
+     * @param zoom масштаб
+     */
+    setZoom(zoom){
+        this.setState({zoom: zoom}, () => {
+            if(typeof this.props.onChangeZoom === "function"){
+                this.props.onChangeZoom(zoom);
+            }
+        });
+    }
+
+    /**
      * Увеличение масштаба
      */
     handleZoomInClick(event){
         let { zoom } = this.state;
-        // zoom++;
         zoom = zoom >= 1 ? zoom+1 : zoom*2;
         this.setState({zoom: zoom}, () => {
             if(typeof this.props.onChangeZoom === "function"){

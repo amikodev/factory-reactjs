@@ -44,6 +44,8 @@ import FreqConverter from './equipment/freqConv/FreqConverter';
 
 import CncRouterSettings from './settings/CncRouterSettings';
 
+import TestCrossOffset from './TestCrossOffset';
+
 // import { render } from 'react-dom';
 // import { withStyles } from '@material-ui/core/styles';
 
@@ -128,7 +130,7 @@ class App extends React.Component{
             if(autoChangeTab)
                 this.mainMenuRef.current.changeTab(TAB_EQUIPMENT);
 
-            console.log(component);
+            // console.log(component);
         });
     }
 
@@ -390,6 +392,10 @@ class App extends React.Component{
                     ]}/> */}
                 </AppContext.Provider>
     
+                {/* <div style={{paddingLeft: 20}}>
+                    <TestCrossOffset />
+                </div> */}
+
             </div>
         );
     
