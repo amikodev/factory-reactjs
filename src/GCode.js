@@ -60,6 +60,7 @@ var GCode = (function(){
 
     const COORD_ABSOLUTE = 0;
     const COORD_RELATIVE = 1;
+    const COORD_OFFSET = 2;
 
     const RUN_FAST = 0;
     const RUN_WORK_LINEAR = 1;
@@ -100,7 +101,7 @@ var GCode = (function(){
         runType: RUN_FAST,
         currentCoord: {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},     // текущие координаты (абсолютные)
         targetCoord:  {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},     // целевые координаты (абсолютные или относительные, в зависимости от coordSystem)
-        systemCoord:  {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},     // координаты нулевой точки при переводе на другую систему координат (G90 или G91)
+        offsetCoord: {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},      // координаты смещения (G92)
         userZeroPoint: {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},    // координаты пользовательского "нуля"
         unit: UNIT_METRIC,                                      // единицы измерения
         circle: {
@@ -270,15 +271,38 @@ var GCode = (function(){
                 break;
             case 90:    // G90 - Задание абсолютных координат опорных точек траектории
                 progParams.coordSystem = COORD_ABSOLUTE;
-                progParams.targetCoord = Object.assign({}, progParams.currentCoord);
-                progParams.systemCoord = {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0};
                 break;
             case 91:    // G91 - Задание координат инкрементально последней введённой опорной точки
                 progParams.coordSystem = COORD_RELATIVE;
-                progParams.targetCoord = {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0};
-                progParams.systemCoord = Object.assign({}, progParams.currentCoord);
                 break;
             case 92:
+                progParams.coordSystem = COORD_OFFSET;
+                progParams.targetCoord = {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0};
+                progParams.offsetCoord = Object.assign({}, progParams.currentCoord);
+                frame.map(cmd => {
+                    switch(cmd[0]){
+                        case 'X':
+                            progParams.offsetCoord.X -= cmd[1];
+                            break;
+                        case 'Y':
+                            progParams.offsetCoord.Y -= cmd[1];
+                            break;
+                        case 'Z':
+                            progParams.offsetCoord.Z -= cmd[1];
+                            break;
+                        case 'A':
+                            progParams.offsetCoord.A -= cmd[1];
+                            break;
+                        case 'B':
+                            progParams.offsetCoord.B -= cmd[1];
+                            break;
+                        case 'C':
+                            progParams.offsetCoord.C -= cmd[1];
+                            break;
+                        default:
+                            break;
+                    }
+                });
                 processThisCommand = false;
                 break;
             case 94:    // G94 - F (подача) — в формате мм/мин
@@ -780,6 +804,36 @@ var GCode = (function(){
             // console.log('frame', frame);
             let processThisFrame = true;
 
+            const calcCoord = (axeName, value) => {
+                let val = value;
+                if(progParams.unit == UNIT_INCH){       // дюймы в миллиметры
+                    val *= 25.4;
+                }
+
+                switch(axeName){
+                    case 'x':
+                        progParams.targetCoord.X = (progParams.coordSystem == COORD_RELATIVE ? progParams.targetCoord.X : (progParams.coordSystem == COORD_OFFSET ? progParams.offsetCoord.X : 0)) + val;
+                        break;
+                    case 'y':
+                        progParams.targetCoord.Y = (progParams.coordSystem == COORD_RELATIVE ? progParams.targetCoord.Y : (progParams.coordSystem == COORD_OFFSET ? progParams.offsetCoord.Y : 0)) + val;
+                        break;
+                    case 'z':
+                        progParams.targetCoord.Z = (progParams.coordSystem == COORD_RELATIVE ? progParams.targetCoord.Z : (progParams.coordSystem == COORD_OFFSET ? progParams.offsetCoord.Z : 0)) + val;
+                        break;
+                    case 'a':
+                        progParams.targetCoord.A = (progParams.coordSystem == COORD_RELATIVE ? progParams.targetCoord.A : (progParams.coordSystem == COORD_OFFSET ? progParams.offsetCoord.A : 0)) + val;
+                        break;
+                    case 'b':
+                        progParams.targetCoord.B = (progParams.coordSystem == COORD_RELATIVE ? progParams.targetCoord.B : (progParams.coordSystem == COORD_OFFSET ? progParams.offsetCoord.B : 0)) + val;
+                        break;
+                    case 'c':
+                        progParams.targetCoord.C = (progParams.coordSystem == COORD_RELATIVE ? progParams.targetCoord.C : (progParams.coordSystem == COORD_OFFSET ? progParams.offsetCoord.C : 0)) + val;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             frame.map(el => {
                 // console.log('el', el);
                 let letter = el[0];
@@ -797,22 +851,22 @@ var GCode = (function(){
                         break;
 
                     case 'X':
-                        progParams.targetCoord.X = parseFloat(value.toFixed(3));
+                        calcCoord('x', parseFloat(value.toFixed(3)));
                         break;
                     case 'Y':
-                        progParams.targetCoord.Y = parseFloat(value.toFixed(3));
+                        calcCoord('y', parseFloat(value.toFixed(3)));
                         break;
                     case 'Z':
-                        progParams.targetCoord.Z = parseFloat(value.toFixed(3));
+                        calcCoord('z', parseFloat(value.toFixed(3)));
                         break;
                     case 'A':
-                        progParams.targetCoord.A = parseFloat(value.toFixed(3));
+                        calcCoord('a', parseFloat(value.toFixed(3)));
                         break;
                     case 'B':
-                        progParams.targetCoord.B = parseFloat(value.toFixed(3));
+                        calcCoord('b', parseFloat(value.toFixed(3)));
                         break;
                     case 'C':
-                        progParams.targetCoord.C = parseFloat(value.toFixed(3));
+                        calcCoord('c', parseFloat(value.toFixed(3)));
                         break;
 
                     case 'I':
@@ -870,7 +924,7 @@ var GCode = (function(){
                 if(processFrame(frame)){
                     let pParams = Object.assign({}, progParams);
                     pParams = JSON.parse(JSON.stringify(pParams));
-                    let targetPoint = {x: pParams.targetCoord.X + pParams.systemCoord.X, y: pParams.targetCoord.Y + pParams.systemCoord.Y};
+                    let targetPoint = {x: pParams.targetCoord.X, y: pParams.targetCoord.Y};
                     // console.log('targetPoint', JSON.stringify(targetPoint));
                     
                     const _recalcCoords = () => {
