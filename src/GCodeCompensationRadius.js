@@ -174,7 +174,7 @@ var GCodeCompensationRadius = (function(){
         let angle1 = Math.atan2(y1-yc, x1-xc);
         let angle2 = Math.atan2(y2-yc, x2-xc);
 
-        return {center: {x: xc, y: yc}, r, angle1, angle2, ccw};
+        return {center: {x: xc, y: yc}, r, angle1, angle2, ccw, p1, p2};
     };
 
     /**
@@ -200,7 +200,7 @@ var GCodeCompensationRadius = (function(){
         let angle1 = Math.atan2(y1-yc, x1-xc);
         let angle2 = Math.atan2(y2-yc, x2-xc);
 
-        return {center: {x: xc, y: yc}, r, angle1, angle2, ccw};
+        return {center: {x: xc, y: yc}, r, angle1, angle2, ccw, p1, p2};
     }
     
     /**
@@ -404,7 +404,7 @@ var GCodeCompensationRadius = (function(){
     /**
      * Определение лежит ли точка a3 внутри сегмента окружности
      * @param circle окружность
-     * @param a3 произвольная точка
+     * @param a3 произвольный угол
      */
     const withinArc = (circle, a3) => {
         let a1 = Math.fmod(circle.angle1, Math.PI*2);
