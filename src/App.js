@@ -17,12 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 import React from 'react';
-// import { makeStyles } from '@material-ui/core/styles';
 
 import './App.css';
 import 'fontsource-roboto';
-
-// import { Button } from '@material-ui/core';
 
 import AppsIcon from '@material-ui/icons/Apps';
 import BuildIcon from '@material-ui/icons/Build';
@@ -46,32 +43,12 @@ import CncRouterSettings from './settings/CncRouterSettings';
 
 import TestCrossOffset from './TestCrossOffset';
 
-// import { render } from 'react-dom';
-// import { withStyles } from '@material-ui/core/styles';
-
 
 // const TAB_EQUIPMENTS = 0;
 const TAB_EQUIPMENT = 1;
 // const TAB_SETTINGS = 2;
 // const TAB_MACROS = 3;
 // const TAB_ABOUT = 4;
-
-// const useStyles = makeStyles((theme) => ({
-// // const useStyles = theme => ({
-//     root: {
-//         '& .MuiTab-root': {
-//             width: 0,
-//             minWidth: 0,
-
-//         },
-//         // flexGrow: 1,
-//         // width: '100%',
-//         // backgroundColor: theme.palette.background.paper,
-//         width: 0,
-//         minWidth: 0,
-//     },
-// // });
-// }));
 
 
 class App extends React.Component{
@@ -91,7 +68,6 @@ class App extends React.Component{
             currentEquipment: null,
             equipmentComponent: null,
             equipmentSettingsComponent: null,
-            // equipmentComponentName: null,
         };
 
         this.mainMenuRef = React.createRef();
@@ -99,23 +75,38 @@ class App extends React.Component{
 
         this.listenersWsRecieve = {};
 
-        // this.ws = null;
-        window.Equipments.initItems();
-        // console.log(window.Equipments);
+        this.equipmentRefs = {};
+
+
+        console.log('equipmentName', props.equipmentName);
+        if(props.equipmentName === null){
+            window.Equipments.initItems();
+        } else{
+            window.Equipments.initItem(props.equipmentName);
+        }
+
     }
 
     handleEquipmentSelect(item, autoChangeTab=true){
-
         let component = null;
         component = 'TAB_EQUIPMENT';
+
+        let ref = null;
+        if(typeof this.equipmentRefs[item.name] === "undefined"){
+            ref = React.createRef();
+            this.equipmentRefs[item.name] = ref;
+        }
+        ref = this.equipmentRefs[item.name];
+
+
         let componentSettings = null;
         switch(item.type){
             case Equipments.TYPE_CNC_ROUTER:
-                component = <CncRouter item={item} />;
+                component = <CncRouter item={item} ref={ref} />;
                 componentSettings = <CncRouterSettings item={item} />;
                 break;
             case Equipments.TYPE_FREQ_CONVERTER:
-                component = <FreqConverter item={item} />;
+                component = <FreqConverter item={item} ref={ref} />;
                 break;
             default:
                 break;
@@ -137,12 +128,20 @@ class App extends React.Component{
     getEquipmentComponent(item){
         let component = null;
         component = 'TAB_EQUIPMENT';
+
+        let ref = null;
+        if(typeof this.equipmentRefs[item.name] === "undefined"){
+            ref = React.createRef();
+            this.equipmentRefs[item.name] = ref;
+        }
+        ref = this.equipmentRefs[item.name];
+
         switch(item.type){
             case Equipments.TYPE_CNC_ROUTER:
-                component = <CncRouter item={item} />;
+                component = <CncRouter item={item} ref={ref} />;
                 break;
             case Equipments.TYPE_FREQ_CONVERTER:
-                component = <FreqConverter item={item} />;
+                component = <FreqConverter item={item} ref={ref} />;
                 break;
             default:
                 break;
@@ -175,6 +174,15 @@ class App extends React.Component{
         }
     }
 
+    handleEquipmentWsStateChange(item, wsEventType){
+        let component = this.getEquipmentComponent(item);
+        let func = null;
+        try{
+            func = component.ref.current.wsStateChange;
+        } catch(e){}
+        if(func !== null && typeof func === "function") func(wsEventType);
+    }
+
     addListenerWsRecieve(name, func){
         if(typeof this.listenersWsRecieve[name] === "undefined"){
             this.listenersWsRecieve[name] = [];
@@ -185,15 +193,11 @@ class App extends React.Component{
     }
 
     removeListenerWsRecieve(name, ind){
-        // console.log('listenersWsRecieve', this.listenersWsRecieve);
-        // console.log('removeListenerWsRecieve', name, ind);
         if(typeof this.listenersWsRecieve[name] !== "undefined"){
-            // console.log(name, ind, this.listenersWsRecieve[name].length);
             if(ind < this.listenersWsRecieve[name].length){
                 this.listenersWsRecieve[name][ind] = null;
             }
         }
-        // console.log('listenersWsRecieve', this.listenersWsRecieve);
     }
 
     wsPrepareData(data){
@@ -254,14 +258,6 @@ class App extends React.Component{
 
     render(){
 
-        // const classes = useStyles();
-
-        // const classes = {};
-
-        // console.log(classes);
-
-
-
         let menuItems = [];
 
         if(window.Equipments.getItems().length > 1){
@@ -273,11 +269,11 @@ class App extends React.Component{
                         <Equipments 
                             onSelect={(item) => this.handleEquipmentSelect(item)}
                             onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
+                            onWsStateChange={(item, wsEventType) => this.handleEquipmentWsStateChange(item, wsEventType)}
                         />
                 }
             );
         } else{
-            // console.log(classes);
             menuItems.push(
                 {
                     caption: '', 
@@ -286,16 +282,13 @@ class App extends React.Component{
                         <Equipments 
                             onSelect={(item) => this.handleEquipmentSelect(item)}
                             onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
+                            onWsStateChange={(item, wsEventType) => this.handleEquipmentWsStateChange(item, wsEventType)}
                         />,
                     disabled: true,
                     style: {
                         minWidth: 0,
                         padding: 0,
                     },
-                    // classes: classes,
-                    // classes: {
-                    //     root: classes.root,
-                    // }
                 }
             );
         }
@@ -307,13 +300,11 @@ class App extends React.Component{
                 component: (
 
                     window.Equipments.getItems().map(item => {
-                        // console.log(item.caption);
                         return (
                             <div 
                                 key={item.name}
                                 hidden={this.state.currentEquipment !== null && this.state.currentEquipment.name !== item.name}
                             >
-                                {/* {item.caption} */}
                                 {this.getEquipmentComponent(item)}
                             </div>
                         );
@@ -323,17 +314,17 @@ class App extends React.Component{
                 disabled: this.state.currentEquipment === null
             }
         );
-        menuItems.push(
-            {
-                caption: 'Настройки', 
-                icon: <BuildIcon />, 
-                component: this.state.equipmentSettingsComponent, 
-                disabled: this.state.equipmentSettingsComponent === null
-            }
-        );
-        menuItems.push(
-            {caption: 'Макросы', icon: <ChangeHistoryIcon />, component: <Macros />}
-        );
+        // menuItems.push(
+        //     {
+        //         caption: 'Настройки', 
+        //         icon: <BuildIcon />, 
+        //         component: this.state.equipmentSettingsComponent, 
+        //         disabled: this.state.equipmentSettingsComponent === null
+        //     }
+        // );
+        // menuItems.push(
+        //     {caption: 'Макросы', icon: <ChangeHistoryIcon />, component: <Macros />}
+        // );
         menuItems.push(
             {caption: 'О программе', icon: <InfoIcon />, component: <About />}
         );
@@ -341,7 +332,6 @@ class App extends React.Component{
         return (
             <div className="App">
                 <AppContext.Provider value={{
-                    // ws: this.ws,
                     addListenerWsRecieve: this.addListenerWsRecieve,
                     removeListenerWsRecieve: this.removeListenerWsRecieve,
                     wsPrepareData: this.wsPrepareData,
@@ -401,6 +391,10 @@ class App extends React.Component{
     
     }
 }
+
+App.defaultProps = {
+    equipmentName: null,
+};
 
 export default App;
 // export default withStyles(useStyles)(App);

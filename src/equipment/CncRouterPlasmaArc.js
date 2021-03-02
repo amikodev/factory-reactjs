@@ -64,16 +64,12 @@ class CncRouterPlasmaArc extends React.Component{
     }
 
     componentDidMount(){
-
         // const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve, concatenateBuffer } = this.context;
         const { addListenerWsRecieve } = this.context;
         const { item } = this.props;
 
-        // let listenerInd = null;
-        // listenerInd = addListenerWsRecieve(item.name, data => {
         addListenerWsRecieve(item.name, data => {
             data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-            // console.log('Plasma arc data', data);
             if(data[0] === OBJ_NAME_PLASMA_ARC){
                 if(data[1] === PLASMA_ARC_START){
                     this.setState({doStartRunned: false});
@@ -94,22 +90,22 @@ class CncRouterPlasmaArc extends React.Component{
                 }
             }
         });
-
-
     }
 
     handleStartClick(event){
-        // const { doStart, arcStarted } = this.state;
         const { doStart } = this.state;
 
-        // this.setState({doStart: !doStart});
-        // this.setState({arcStarted: !arcStarted});
         this.setState({doStartRunned: true});
 
         if(typeof this.props.onStartClick === "function"){
             this.props.onStartClick(!doStart);
         }
+    }
 
+    componentDidUpdate(prevProps){
+        if(prevProps.started !== this.props.started){
+            this.setState({arcStarted: this.props.started});
+        }
     }
 
     render(){
@@ -123,18 +119,17 @@ class CncRouterPlasmaArc extends React.Component{
                     {!doStart ? ('Запустить') : ('Остановить')}
                 </Button>
                 {arcStarted &&
-                <>
-                <Brightness1Icon color='secondary'/>
-                {('Дуга запущена')}
-                </>
+                    <>
+                    <Brightness1Icon color='secondary'/>
+                    {('Дуга запущена')}
+                    </>
                 }
                 {!arcStarted &&
-                <>
-                <Brightness1Icon color='disabled'/>
-                {('Дуга не запущена')}
-                </>
+                    <>
+                    <Brightness1Icon color='disabled'/>
+                    {('Дуга не запущена')}
+                    </>
                 }
-
                 <br/><br/>
             </form>
         );
@@ -143,6 +138,7 @@ class CncRouterPlasmaArc extends React.Component{
 
 CncRouterPlasmaArc.defaultProps = {
     onStartClick: null,         // функция вызываемая при нажатии на кнопку "Запустить"/"Остановить"
+    started: false,
 };
 
 export default withStyles(useStyles)(CncRouterPlasmaArc);

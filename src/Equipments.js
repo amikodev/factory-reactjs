@@ -39,11 +39,7 @@ import EquipmentParams from './EquipmentParams';
 
 const styles = {
     root: {
-        // maxWidth: 345,
-        // minWidth: 345,
-        // float: 'left',
-        // margin: '0 1rem 1rem 0',
-        // minHeight: 120,
+
     },
 };
 
@@ -83,94 +79,88 @@ class Equipments extends React.Component {
             openNewEquipment: false,
         };
 
-        // console.log('Equipments constructor');
-
-
     }
 
 
     componentDidMount() {
-
-        // console.log('localStorage', localStorage.getItem('routers'));
-
         let items = EquipmentsAPI.items;
-
         let _this = this;
-
-        // EquipmentsAPI.items = items;
-
         if(items.length === 1){
-
             this.handleItemSelect(items[0]);
-
         } 
-        // else{
+
+        let tryWsConnectCounts = {};
+        let maxTries = 10;      // максимальное количество подряд неудачных соединений
 
         items.map(item => {
             if(typeof EquipmentsAPI.itemsWs[item.name] !== "undefined")
                 return null;
 
-            let wsUrl = 'ws://'+item.url+'/';
-            console.log('WebSocket: '+wsUrl);
-            let ws = new WebSocket(wsUrl);
-            ws.binaryType = 'arraybuffer';
+            let wsConnect = () => {
+                let wsUrl = 'ws://'+item.url+'/';
+                console.log('WebSocket: '+wsUrl);
+                let ws = new WebSocket(wsUrl);
+                ws.binaryType = 'arraybuffer';
 
-            item.stateConnect = Equipments.STATE_CONNECTING;
-            ws.onopen = (event) => {
-                console.log('ws.onopen');
-                item.stateConnect = Equipments.STATE_CONNECTED;
-                _this.setState({items: items});
-                
-            }
+                tryWsConnectCounts[item.name] = 0;
 
-            ws.onmessage = (event) => {
-                // console.log('ws.onmessage');
-                if(event.data instanceof ArrayBuffer){
-                    // let data = new Uint8Array(event.data);
-
-                    if(typeof this.props.onWsRecieve === 'function'){
-                        this.props.onWsRecieve(item, event.data);
-                    }
-            
-
-                    // console.log(data);
-                    // console.log(new Float32Array(data.slice(2, 6), 0, 4));
-                    // let x = new Float32Array(event.data.slice(2, 6), 0, 1)[0];
-                    // let y = new Float32Array(event.data.slice(6, 10), 0, 1)[0];
-                    // x = parseFloat(x);
-                    // let x = new Float32Array(event.data.slice(2, 4), 0, 4);
-                    // let y = new Float32Array(event.data.slice(6, 4), 0, 4);
-                    // console.log(x, y);
+                item.stateConnect = Equipments.STATE_CONNECTING;
+                if(typeof this.props.onWsStateChange === 'function'){
+                    this.props.onWsStateChange(item, 'connecting');
                 }
-    
-                // console.log(event.data);
-    
+
+                ws.onmessage = (event) => {
+                    if(event.data instanceof ArrayBuffer){
+                        if(typeof this.props.onWsRecieve === 'function'){
+                            this.props.onWsRecieve(item, event.data);
+                        }
+                    }
+                }
+
+                ws.onopen = (event) => {
+                    console.log('ws.onopen');
+                    item.stateConnect = Equipments.STATE_CONNECTED;
+                    _this.setState({items: items});
+                    tryWsConnectCounts[item.name] = 0;
+                    if(typeof this.props.onWsStateChange === 'function'){
+                        this.props.onWsStateChange(item, event.type);
+                    }
+                }
+
+                ws.onclose = (event) => {
+                    console.log('ws.onclose');
+                    item.stateConnect = Equipments.STATE_NONE;
+                    _this.setState({items: items});
+                    tryWsConnectCounts[item.name]++;
+                    if(typeof this.props.onWsStateChange === 'function'){
+                        this.props.onWsStateChange(item, event.type);
+                    }
+                    if(tryWsConnectCounts[item.name] < maxTries){
+                        setTimeout(() => {
+                            wsConnect();
+                        }, 1000);
+                    }
+                }
+
+                ws.onerror = (event) => {
+                    console.log('ws.onerror');
+                    item.stateConnect = Equipments.STATE_ERROR;
+                    _this.setState({items: items});
+                    if(typeof this.props.onWsStateChange === 'function'){
+                        this.props.onWsStateChange(item, event.type);
+                    }
+                }
+
+                EquipmentsAPI.itemsWs[item.name] = ws;
             }
 
-            ws.onclose = (event) => {
-                console.log('ws.onclose');
-                item.stateConnect = Equipments.STATE_NONE;
-                _this.setState({items: items});
-            }
+            wsConnect();
 
-            ws.onerror = (event) => {
-                console.log('ws.onerror');
-                item.stateConnect = Equipments.STATE_ERROR;
-                _this.setState({items: items});
-            }
-
-
-            EquipmentsAPI.itemsWs[item.name] = ws;
             _this.setState({items: items});
             return null;
         });
 
-        // }
-
         this.setState({items: items});
-
-        // console.log(this.context);
-
     }
 
     handleItemSelect(item){
@@ -189,26 +179,12 @@ class Equipments extends React.Component {
         this.setState({openNewEquipment: false});
     }
 
-    /**
-     * Получить цвет по статусу соединения с сервером
-     * @param {int} state 
-     */
-    // getColorByStateConnect(state){
-
-    // }
-
-
     render() {
-
         const { items } = this.state;
-
-        // console.log(Equipments.STATE_CONNECT_COLOR);
 
         return (
             <div>
-
                 <Grid container spacing={3}>
-
                     {items.map((item, ind) => {
                         return (
                             <Grid key={ind} item xs={12} sm={6} xl={3}>
@@ -219,23 +195,11 @@ class Equipments extends React.Component {
                                             {item.caption}
                                         </Typography>
                                         <Typography variant="body2" color="textSecondary" component="div">
-                                            {/* {item.type === Equipments.TYPE_CNC_ROUTER &&
-                                                <TypeCncRouter item={item} />
-                                            } */}
                                             {item.type} <br/>
                                             {item.url} <FiberManualRecordIcon style={{fontSize: 'inherit', float: 'left', margin: '3px 5px 0 0', color: Equipments.STATE_CONNECT_COLOR[item.stateConnect]}} />
-
                                         </Typography>
                                     </CardContent>
                                 </CardActionArea>
-                                {/* <CardActions>
-                                    <Button size="small" color="primary">
-                                        Share
-                                    </Button>
-                                    <Button size="small" color="primary">
-                                        Learn More
-                                    </Button>
-                                </CardActions> */}
                             </Card>
                             </Grid>
                         );
@@ -260,9 +224,7 @@ class Equipments extends React.Component {
                     </Grid>
                     }
 
-
                 </Grid>
-
 
                 {this.state.openNewEquipment &&
                 <DialogModal 
@@ -277,86 +239,89 @@ class Equipments extends React.Component {
             </div>
         );
     }
-
-
 }
-
-
-// function TypeCncRouter(props){
-
-//     const { item } = props;
-
-//     return (
-//         <React.Fragment>
-//             {item.type} <br/>
-//             {item.url}
-//         </React.Fragment>
-//     );
-// }
 
 Equipments.defaultProps = {
 
     onSelect: null,             // функция вызываемая при выборе элемента
+    onWsStateChange: null,
 
 };
 
 
 window.Equipments = (() => {
 
+    let equipmentItems = [
+        {
+            type: Equipments.TYPE_CNC_ROUTER, 
+            caption: 'Plasma', 
+            name: 'cncPlasma', 
+            // url: '192.168.1.65', 
+            url: '192.168.1.113', 
+            stateConnect: Equipments.STATE_NONE, 
+            params: {x: 1250, y: 2500, z: 120}
+        },
+        // {
+        //     type: Equipments.TYPE_CNC_ROUTER, 
+        //     caption: 'Plasma 2', 
+        //     name: 'cncPlasma2', 
+        //     url: '192.168.1.113', 
+        //     stateConnect: Equipments.STATE_NONE, 
+        //     params: {x: 1300, y: 2500, z: 120}
+        // },
+        // {type: Equipments.TYPE_CNC_ANGLE, caption: 'Plasma angle', name: 'cncPlasmaAngle', url: '192.168.4.1', stateConnect: Equipments.STATE_NONE, params: {x: 1500, y: 2500, z: 120}},
+        // {type: Equipments.TYPE_CNC_LATHE, caption: 'Токарный станок', name: 'cnc_lathe_1', url: '192.168.4.2', params: {x: 500, z: 50}},
+        {
+            type: Equipments.TYPE_FREQ_CONVERTER, 
+            caption: 'Частотный преобр.', 
+            name: 'freqConv1', 
+            url: '192.168.4.3', 
+            stateConnect: Equipments.STATE_NONE, 
+            params: {}
+        },
+        // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
+        // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
+        // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
+        {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 1', name: 'rmt1_1', url: '192.168.4.4', stateConnect: Equipments.STATE_NONE, params: {}},
+        {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 2', name: 'rmt1_2', url: '192.168.4.5', stateConnect: Equipments.STATE_NONE, params: {}},
+    ];
+    // console.log(window.location, window.location.hostname);
+    // items = [
+    //     {
+    //         type: Equipments.TYPE_CNC_ROUTER, 
+    //         caption: 'Plasma', 
+    //         name: 'cncPlasma', 
+    //         // url: '192.168.1.65', 
+    //         // url: '192.168.1.113', 
+    //         url: window.location.hostname,
+    //         stateConnect: Equipments.STATE_NONE, 
+    //         params: {x: 1300, y: 2500, z: 120}
+    //     },
+    // ];
+
     const initItems = () => {
-        let items = [
-            {
-                type: Equipments.TYPE_CNC_ROUTER, 
-                caption: 'Plasma', 
-                name: 'cncPlasma', 
-                // url: '192.168.1.65', 
-                url: '192.168.1.113', 
-                stateConnect: Equipments.STATE_NONE, 
-                params: {x: 1300, y: 2500, z: 120}
-            },
-            // {
-            //     type: Equipments.TYPE_CNC_ROUTER, 
-            //     caption: 'Plasma 2', 
-            //     name: 'cncPlasma2', 
-            //     url: '192.168.1.113', 
-            //     stateConnect: Equipments.STATE_NONE, 
-            //     params: {x: 1300, y: 2500, z: 120}
-            // },
-            // {type: Equipments.TYPE_CNC_ANGLE, caption: 'Plasma angle', name: 'cncPlasmaAngle', url: '192.168.4.1', stateConnect: Equipments.STATE_NONE, params: {x: 1500, y: 2500, z: 120}},
-            // {type: Equipments.TYPE_CNC_LATHE, caption: 'Токарный станок', name: 'cnc_lathe_1', url: '192.168.4.2', params: {x: 500, z: 50}},
-            {
-                type: Equipments.TYPE_FREQ_CONVERTER, 
-                caption: 'Частотный преобр.', 
-                name: 'freqConv1', 
-                url: '192.168.4.3', 
-                stateConnect: Equipments.STATE_NONE, 
-                params: {}
-            },
-            // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
-            // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
-            // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
-            {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 1', name: 'rmt1_1', url: '192.168.4.4', stateConnect: Equipments.STATE_NONE, params: {}},
-            {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 2', name: 'rmt1_2', url: '192.168.4.5', stateConnect: Equipments.STATE_NONE, params: {}},
-        ];
-        // console.log(window.location, window.location.hostname);
-        // items = [
-        //     {
-        //         type: Equipments.TYPE_CNC_ROUTER, 
-        //         caption: 'Plasma', 
-        //         name: 'cncPlasma', 
-        //         // url: '192.168.1.65', 
-        //         // url: '192.168.1.113', 
-        //         url: window.location.hostname,
-        //         stateConnect: Equipments.STATE_NONE, 
-        //         params: {x: 1300, y: 2500, z: 120}
-        //     },
-        // ];
-        EquipmentsAPI.items = items;
+        EquipmentsAPI.items = equipmentItems;
+    }
+
+    const initItem = (name) => {
+        try{
+            let item = getItem(name);
+
+            if(window.location.hostname !== "localhost"){
+                item.url = window.location.hostname;
+            }
+            console.log('Item "'+ name +'" url: '+ item.url);
+
+
+            EquipmentsAPI.items = [ item ];
+        } catch(e){
+            console.log(e);
+        }
     }
 
     const getItem = (name) => {
         let item = null;
-        EquipmentsAPI.items.map((el => {
+        equipmentItems.map((el => {
             if(el.name === name) item = el;
             return null;
         }));
@@ -366,11 +331,11 @@ window.Equipments = (() => {
     }
 
     return {
-        initItems: initItems,
+        initItems,
+        initItem,
         getItems: () => [...EquipmentsAPI.items],
-        getItem: getItem,
+        getItem,
         getItemWs: (name) => {
-            // let item = getItem(name);
             let ws = typeof EquipmentsAPI.itemsWs[name] !== "undefined" ? EquipmentsAPI.itemsWs[name] : null;
             if(ws === null)
                 throw new Error('WebSocket for "'+name+'" not created.');
@@ -380,5 +345,4 @@ window.Equipments = (() => {
 })();
 
 export default Equipments;
-// export default React.memo(Equipments);
 

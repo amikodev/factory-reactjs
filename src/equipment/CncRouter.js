@@ -29,6 +29,11 @@ import LinearProgress from '@material-ui/core/LinearProgress';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 
+import FormControl from '@material-ui/core/FormControl';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
+
 import Alert from '@material-ui/lab/Alert';
 
 
@@ -41,6 +46,8 @@ import ImageIcon from '@material-ui/icons/Image';
 import PublishIcon from '@material-ui/icons/Publish';
 import ComputerIcon from '@material-ui/icons/Computer';
 import EditIcon from '@material-ui/icons/Edit';
+import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
+import HighlightOffIcon from '@material-ui/icons/HighlightOff';
 
 import {AppContext} from '../AppContext';
 
@@ -50,6 +57,7 @@ import CncRouterArrows from './CncRouterArrows';
 import CncRouterPlasmaArc from './CncRouterPlasmaArc';
 
 import GCode from '../GCode';
+import { letterCodes } from '../GCode';
 
 
 import { withStyles } from '@material-ui/core/styles';
@@ -58,15 +66,9 @@ const useStyles = theme => ({
     root: {
         '& .MuiTextField-root': {
             margin: theme.spacing(1),
-            // marginTop: theme.spacing(1),
-            // marginBottom: theme.spacing(1),
-            // width: '100%',
         },
         '& .MuiButton-root': {
             margin: theme.spacing(1),
-            // marginTop: theme.spacing(1),
-            // marginBottom: theme.spacing(1),
-            // width: '100%',
             width: '-webkit-fill-available',
         },
     },
@@ -78,16 +80,20 @@ const useStyles = theme => ({
             margin: theme.spacing(1),
             marginLeft: theme.spacing(1)/2,
             marginRight: theme.spacing(1)/2,
-            // marginBottom: theme.spacing(1),
         },
     },
     nextPaper: {
         marginTop: theme.spacing(3),
     },
+    exampleGcode: {
+        margin: theme.spacing(1),
+        width: 200,
+
+    },
 });
 
 
-
+const OBJ_NAME_CNC_ROUTER = 0x4F;
 const OBJ_NAME_CNC_GCODE = 0x50;
 const OBJ_NAME_CNC_GCODE_PREPARE = 0x51;
 const OBJ_NAME_AXE = 0x52;
@@ -100,18 +106,9 @@ const OBJ_NAME_PLASMA_ARC = 0x55;
 const CMD_RUN = 0x03;
 const CMD_STOP = 0x04;
 
-// const AXE_X = 0x01;
-// const AXE_Y = 0x02;
-// const AXE_Z = 0x03;
-// const AXE_A = 0x04;
-// const AXE_B = 0x05;
-// const AXE_C = 0x06;
-
-// const AXE_DIRECTION_FORWARD = 0x01;
-// const AXE_DIRECTION_BACKWARD = 0x02;
-
 const PREPARE_SIZE = 0x01;
 const PREPARE_RUN = 0x02;
+const PREPARE_STOP = 0x03;
 
 const PLASMA_ARC_START = 0x01;
 const PLASMA_ARC_STARTED = 0x02;
@@ -136,6 +133,8 @@ class CncRouter extends React.Component{
         this.handleOpenGcode = this.handleOpenGcode.bind(this);
         this.getPointerCanvas = this.getPointerCanvas.bind(this);
 
+        this.wsStateChange = this.wsStateChange.bind(this);
+
         this.state = {
 
             selX: '',
@@ -146,14 +145,20 @@ class CncRouter extends React.Component{
             currentGcodeLine: 3,
             gcodeTimestamp: 0,
 
-            // gcodeFileOpened
             gcodeUploadedProgress: 0,
             gcodeUploadPrepareProgress: 0,
             gcodeUploading: false,
             gcodeUploaded: false,
-            gcodeRunning: false,
+            gcodeRunned: false,
+
+            plasmaStarted: false,
 
             messageErrorOpened: false,
+            messageWarningCROpened: false,
+
+            pointerZoom: 1,
+
+            wsStateConnect: Equipments.STATE_NONE,
 
         };
 
@@ -161,7 +166,9 @@ class CncRouter extends React.Component{
 
         this.testRunChecked = false;        // тестовый прогон программы gcode
 
-        // console.log(GCode);
+
+        this.listenerRunGcodeInd = null;
+        this.listenerStopGcodeInd = null;
 
     }
 
@@ -180,20 +187,14 @@ class CncRouter extends React.Component{
     }
 
     handleSelectedRun(event){
-        console.log('run', this.state.selX, this.state.selY, this.state.selZ);
-
         const { wsPrepareData, floatToArray } = this.context;
         const { item } = this.props;
         const { selX, selY, selZ} = this.state;
 
-        // // преобразование float в массив hex
-        // var view = new DataView(new ArrayBuffer(4));
-        // view.setFloat32(0, parseFloat(speed));
-        // // hexArr = Array.apply(null, { length: 4 }).map((_, i) => view.getUint8(i));
-        // let hexArr = Array.apply(null, { length: 4 }).map((_, i) => view.getUint8(3-i));
+        let point = {x: selX, y: selY, z: selZ};
+        console.log('run', JSON.stringify(point));
 
         let data = [OBJ_NAME_COORD_TARGET, CMD_RUN];
-        // let hexArr = floatToArray(speed);
         data = data
             .concat(floatToArray(selX))
             .concat(floatToArray(selY))
@@ -202,11 +203,7 @@ class CncRouter extends React.Component{
 
         let ws = window.Equipments.getItemWs(item.name);
 
-        // console.log(wsPrepareData( data ));
-
         ws.send(wsPrepareData(data));
-
-
     }
 
     handleSelectedCancel(event){
@@ -215,7 +212,6 @@ class CncRouter extends React.Component{
 
     handleOpenGcode(event){
         let _this = this;
-        // console.log(event.nativeEvent.target.files);
         let files = event.nativeEvent.target.files;
         if(files.length > 0){
             let file = files[0];
@@ -226,10 +222,8 @@ class CncRouter extends React.Component{
             // TODO:
             // сделать обработку для больших файлов
             reader.onload = function() {
-                // console.log(reader.result);
                 localStorage.setItem('gcodeContent', reader.result);
                 let lines = reader.result.split("\n");
-                // console.log('onload', lines);
                 _this.setState({gcodeLines: lines, currentGcodeLine: 0, gcodeTimestamp: (new Date()).getTime()});
             };
           
@@ -241,12 +235,40 @@ class CncRouter extends React.Component{
         }
     }
 
+    /**
+     * Анализ gcode на наличие команд компенсации радиуса инструмента
+     */
+    gcodeAnalyseCompensationRadius(cmds){
+        this.setState({messageWarningCROpened: false});
+        let gcrExists = false;
+        if(cmds !== null){
+            cmds.map(frame => {
+                if(gcrExists) return;
+                let fcs = frame[1];
+                fcs.map(fc => {
+                    if(fc !== null){
+                        if(fc[0] === letterCodes.G && (fc[2] === 41 || fc[2] === 42)){
+                            gcrExists = true;
+                        }
+                    }
+                });
+            });
+        }
+
+        if(gcrExists){
+            this.setState({messageWarningCROpened: true});
+        }
+
+    }
+
     handleDrawClick(event){
         let gcode = this.state.gcodeLines.join("\n");
         let parsed = GCode.parse(gcode);
-        // console.log(parsed);
+
+        this.gcodeAnalyseCompensationRadius(parsed.cmds);
 
         try{
+            GCode.drawGrid();
             GCode.draw();
         } catch(e){
             console.log('ERROR');
@@ -267,21 +289,10 @@ class CncRouter extends React.Component{
 
         // отправка управляющей программы на контроллер
         const sendProg = () => {
-            // parsed.data.map(line => {
-            //     console.log('sendProg', line);
-            //     ws.send(wsPrepareData(line));
-            // });
 
             let numLine = 0;
 
             this.setState({gcodeUploaded: false, gcodeUploading: true});
-
-            // const sendNextLine = () => {
-            //     let line = parsed.data[numLine];
-            //     // console.log('sendProg', line);
-            //     console.log('line', numLine, '/', parsed.data.length);
-            //     ws.send(wsPrepareData(line));
-            // }
 
             const packSize = 100;           // размер пакета отправляемых данных - 100 строк
             const sendNaxtPack = () => {
@@ -289,7 +300,6 @@ class CncRouter extends React.Component{
                 if(parsed.data.length-numLine < size) 
                     size = parsed.data.length-numLine;
 
-                // this.setState({gcodeUploadedCountLines: numLine, gcodeUploadPrepareCountLines: numLine+size});
                 this.setState({gcodeUploadedProgress: numLine/parsed.data.length*100, gcodeUploadPrepareProgress: (numLine+size)/parsed.data.length*100});
 
                 let buf = new Uint8Array(wsPrepareData([ OBJ_NAME_CNC_GCODE ]));    // первые 16 байт пакета подготовительные, 
@@ -299,7 +309,6 @@ class CncRouter extends React.Component{
                     buf = concatenateBuffer(Uint8Array, buf, new Uint8Array(wsPrepareData(line)));
                 }
                 console.log('line', numLine, '/', parsed.data.length);
-                // console.log(buf);
                 ws.send(buf.buffer);
                 numLine += size;
             }
@@ -307,49 +316,19 @@ class CncRouter extends React.Component{
             let listenerInd = null;
             listenerInd = addListenerWsRecieve(item.name, data => {
                 data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-                // console.log('data', data);
                 if(data[0] === OBJ_NAME_CNC_GCODE){
-                    // removeListenerWsRecieve(item.name, listenerInd);
                     if(numLine < parsed.data.length-1){
-                        // numLine++;
                         sendNaxtPack();
                     } else{
                         // достигнут конец передаваемых данных
                         removeListenerWsRecieve(item.name, listenerInd);
-                        // 
-                        this.setState({gcodeUploaded: true, gcodeUploading: false});
+                        this.setState({gcodeUploaded: true, gcodeUploading: false, gcodeRunned: false});
                     }
                 }
             });
 
-
             sendNaxtPack();
-
-            // return;
-
-            // let listenerInd = null;
-            // listenerInd = addListenerWsRecieve(item.name, data => {
-            //     if(data instanceof ArrayBuffer){
-            //         data = new Uint8Array(data);
-            //     }
-            //     // console.log('data', data);
-            //     if(data[0] == OBJ_NAME_CNC_GCODE){
-            //         // removeListenerWsRecieve(item.name, listenerInd);
-            //         if(numLine < parsed.data.length-1){
-            //             numLine++;
-            //             sendNextLine();
-            //         } else{
-            //             // достигнут конец передаваемых данных
-            //             removeListenerWsRecieve(item.name, listenerInd);
-            //         }
-            //     }
-            // });
-
-            // sendNextLine();
-
         }
-
-        // sendProg();
 
         this.setState({messageErrorOpened: false});
 
@@ -361,7 +340,6 @@ class CncRouter extends React.Component{
                 let listenerInd = null;
                 listenerInd = addListenerWsRecieve(item.name, data => {
                     data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-                    console.log('data recieve', data);
                     if(data[0] === OBJ_NAME_CNC_GCODE_PREPARE){
                         if(data[1] === PREPARE_SIZE){
                             if(data[2] === 1){       // контроллер готов принимать программу, памяти хватает
@@ -388,14 +366,62 @@ class CncRouter extends React.Component{
 
     }
 
+    addListeners(){
+        const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve } = this.context;
+        const { item } = this.props;
+
+        // listener run gcode
+        if(this.listenerRunGcodeInd === null){
+            this.listenerRunGcodeInd = addListenerWsRecieve(item.name, data => {
+                data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+                if(data[0] === OBJ_NAME_CNC_GCODE_PREPARE){
+                    if(data[1] === PREPARE_RUN){
+                        if(data[2] === 1){       // программа запущена
+                            this.setState({gcodeRunned: true});
+                        } else{                  // программа не запущена
+                            this.setState({gcodeRunned: false});
+                        }
+                    }
+                }
+            });
+        }
+
+        // listener stop gcode
+        if(this.listenerStopGcodeInd === null){
+            this.listenerStopGcodeInd = addListenerWsRecieve(item.name, data => {
+                data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+                if(data[0] === OBJ_NAME_CNC_GCODE_PREPARE){
+                    if(data[1] === PREPARE_STOP){
+                        if(data[2] === 1){       // программа остановлена
+                            this.setState({gcodeRunned: false});
+                        }
+                    }
+                }
+            });
+        }
+
+    }
+
+    /**
+     * Запуск программы Gcode
+     */
     handleRunGcodeClick(event){
         // const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve } = this.context;
         const { wsPrepareData } = this.context;
         const { item } = this.props;
-
         let ws = window.Equipments.getItemWs(item.name);
-
         ws.send(wsPrepareData( [OBJ_NAME_CNC_GCODE_PREPARE, PREPARE_RUN, (this.testRunChecked) & 0xFF] ));
+    }
+
+    /**
+     * Остановка программы Gcode
+     */
+    handleStopGcodeClick(event){
+        // const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve } = this.context;
+        const { wsPrepareData } = this.context;
+        const { item } = this.props;
+        let ws = window.Equipments.getItemWs(item.name);
+        ws.send(wsPrepareData( [OBJ_NAME_CNC_GCODE_PREPARE, PREPARE_STOP] ));
     }
 
     handleGcodeEditClick(event){
@@ -413,8 +439,6 @@ class CncRouter extends React.Component{
 
         let ws = window.Equipments.getItemWs(item.name);
 
-        // console.log(wsPrepareData( data ));
-
         ws.send(wsPrepareData(data));
     }
 
@@ -429,16 +453,26 @@ class CncRouter extends React.Component{
 
 
     componentDidMount(){
+        this.addListeners();
+        
         let canvas = this.refCncRouterPointer.current.getCanvasRef().current;
         GCode.setCanvas(canvas);
-
 
         let gcodeContent = localStorage.getItem('gcodeContent');
         if(gcodeContent !== null){
             this.setState({gcodeLines: gcodeContent.split("\n"), gcodeTimestamp: (new Date()).getTime()});
         }
+    }
 
-        // GCode.setUserZeroPoint({X: 200, Y: 200});
+    componentWillUpdate(props){
+        const { item } = props;
+        if(this.state.wsStateConnect !== item.stateConnect){
+            this.setState({wsStateConnect: item.stateConnect}, () => {
+                if(item.stateConnect === Equipments.STATE_CONNECTED){
+                    // this.getDataFromController();
+                }
+            });
+        }
     }
 
     getPointerCanvas(){
@@ -447,18 +481,21 @@ class CncRouter extends React.Component{
     }
 
     handlePointerReady(){
-        let zoom = 2; // 20;
+        let zoom = 1; // 20;
         this.refCncRouterPointer.current.setZoom(zoom);
     }
 
     handlePointerChangeZoom(zoom){
-        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom() * zoom);
+        GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom());
+        GCode.setManualZoom(zoom);
+        GCode.drawGrid();
         GCode.draw();
+        this.setState({pointerZoom: zoom});
     }
 
     handlePointerChangeNav(left, top){
-        // console.log(left, top);
         GCode.setCanvasNav(left, top);
+        GCode.drawGrid();
         GCode.draw();
     }
 
@@ -467,6 +504,7 @@ class CncRouter extends React.Component{
             return;
         }
         this.setState({messageErrorOpened: false});
+        this.setState({messageWarningCROpened: false});
     }
 
     handlePlasmaArcDoStart(doStart){
@@ -486,6 +524,99 @@ class CncRouter extends React.Component{
         this.testRunChecked = event.target.checked;
     }
 
+    handleExampleChange(event){
+        let fname = event.target.value;
+        let url = "http://"+this.props.item.url+"/g/e/"+fname;
+
+        let _this = this;
+
+        fetch(url, {
+            method: 'get',
+            headers: {
+
+            },
+            // body: JSON.stringify(Object.assign({}, {
+
+            // }))
+        })
+        // .then(res => res.json())
+        .then(res => res.text())
+        .then(result => {
+                let lines = result.split("\n");
+                _this.setState({gcodeLines: lines, currentGcodeLine: 0, gcodeTimestamp: (new Date()).getTime()});
+            }, 
+            error => {
+                console.log('error', error);
+            }
+        );
+    }
+
+    /**
+     * Запрос данных от контроллера
+     */
+    getDataFromController(){
+        const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve, concatenateBuffer } = this.context;
+        const { item } = this.props;
+
+        let ws = window.Equipments.getItemWs(item.name);
+
+        let listenerInd = null;
+        listenerInd = addListenerWsRecieve(item.name, data => {
+            data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+            if(data[0] === OBJ_NAME_CNC_ROUTER){
+                let controllerData = {
+                    equipmentType: data[1],
+                    equipmentSubType: data[2],
+                    version: {
+                        major: data[6],
+                        minor: data[5],
+                        build: data[4],
+                        revision: data[3]
+                    },
+                    power: data[7] === 1 ? true : false,
+                    gcodeUploaded: data[8] === 1 ? true : false,
+                    gcodeRunned: data[9] === 1 ? true : false,
+                    equipmentTypeName: String.fromCharCode.apply(null, data.slice(0x10, 0x20)).replace(/\x00/g, ""),
+                    equipmentSubTypeName: String.fromCharCode.apply(null, data.slice(0x20, 0x30)).replace(/\x00/g, ""),
+                };
+
+                console.log(controllerData);
+
+                this.setState({
+                    gcodeUploaded: controllerData.gcodeUploaded,
+                    gcodeRunned: controllerData.gcodeRunned, 
+                    plasmaStarted: controllerData.power,
+                });
+
+                removeListenerWsRecieve(item.name, listenerInd);
+            }
+        });
+
+        ws.send(wsPrepareData( [OBJ_NAME_CNC_ROUTER] ));
+    }
+
+    wsStateChange(wsEventType){
+        console.log('CncRouter', wsEventType);
+        switch(wsEventType){
+            case 'connecting':
+                this.setState({wsStateConnect: Equipments.STATE_CONNECTING});
+                break;
+            case 'open':
+                this.setState({wsStateConnect: Equipments.STATE_CONNECTED});
+                // запрос первичных данных от контроллера
+                this.getDataFromController();
+                break;
+            case 'close':
+                this.setState({wsStateConnect: Equipments.STATE_NONE});
+                break;
+            case 'error':
+                this.setState({wsStateConnect: Equipments.STATE_ERROR});
+                break;
+            default:
+                break;
+        }
+    }
+
     render(){
 
         const { item, classes } = this.props;
@@ -497,6 +628,7 @@ class CncRouter extends React.Component{
 
                 <Typography gutterBottom variant="h5" component="h4">
                     {item.caption}
+                    <FiberManualRecordIcon style={{fontSize: 'inherit', float: 'left', margin: '3px 5px 0 0', color: Equipments.STATE_CONNECT_COLOR[this.state.wsStateConnect]}} />
                 </Typography>
 
                 <Grid container spacing={3}>
@@ -510,6 +642,11 @@ class CncRouter extends React.Component{
                             onChangeZoom={(zoom) => this.handlePointerChangeZoom(zoom)}
                             onChangeNav={(left, top) => this.handlePointerChangeNav(left, top)}
                         />
+
+                        <div>
+                            zoom: {this.state.pointerZoom}
+                        </div>
+
                     </Grid>
                     <Grid item xs={12} sm={3} md={2}>
                     {/* <Grid item xs={12} sm={1} style={{border: "1px #BBB solid", borderRadius: 6}}> */}
@@ -539,6 +676,7 @@ class CncRouter extends React.Component{
                             <CncRouterPlasmaArc
                                 onStartClick={doStart => this.handlePlasmaArcDoStart(doStart)}
                                 item={item} 
+                                started={this.state.plasmaStarted}
                             />
                         </Paper>
 
@@ -554,7 +692,6 @@ class CncRouter extends React.Component{
                                 currentGcodeLine={this.state.currentGcodeLine} 
                                 gcodeTimestamp={this.state.gcodeTimestamp}
                                 item={item} 
-                                // GCode={GCode}
                             />
                         </Paper>
 
@@ -574,13 +711,13 @@ class CncRouter extends React.Component{
                                 </Button>
                             </Tooltip>
 
-                            <Tooltip title={('Загрузить в контроллер')} arrow disabled={this.state.gcodeLines.length === 0}>
+                            <Tooltip title={('Загрузить в контроллер')} arrow disabled={this.state.gcodeLines.length === 0 || this.state.gcodeRunned}>
                                 <Button variant="contained" color="default" component="span" onClick={e => this.handleUploadClick(e)}>
                                     <PublishIcon/>
                                 </Button>
                             </Tooltip>
 
-                            <Tooltip title={('Запустить программу')} arrow disabled={!this.state.gcodeUploaded}>
+                            <Tooltip title={('Запустить программу')} arrow disabled={!this.state.gcodeUploaded || this.state.gcodeRunned}>
                                 <Button variant="contained" color="default" component="span" onClick={e => this.handleRunGcodeClick(e)}>
                                     <ComputerIcon/>
                                 </Button>
@@ -593,8 +730,36 @@ class CncRouter extends React.Component{
                                 </Button>
                             </Tooltip>
                             }
-                            
 
+                            <Tooltip title={('Остановить программу')} arrow disabled={!this.state.gcodeRunned}>
+                                <Button variant="contained" color="default" component="span" onClick={e => this.handleStopGcodeClick(e)}>
+                                    <HighlightOffIcon/>
+                                </Button>
+                            </Tooltip>
+
+                        </div>
+
+                        <div>
+                            <FormControl variant="outlined" className={classes.exampleGcode}>
+                                <InputLabel>Example</InputLabel>
+                                <Select
+                                    label="Example gcode"
+                                    defaultValue=""
+                                    onChange={e => this.handleExampleChange(e)}
+                                >
+                                    {[
+                                        "f1.gcode", 
+                                        "f2.gcode", "f2.ncr.gcode",
+                                        "f3.gcode", "f3.ncr.gcode",
+                                        "f4.gcode", "f4.ncr.gcode",
+                                        "f5.gcode", "f5.ncr.gcode",
+                                    ].map(fname => {
+                                        return (
+                                            <MenuItem value={fname} key={fname}>{fname}</MenuItem>
+                                        );
+                                    })}
+                                </Select>
+                            </FormControl>
                         </div>
 
                         {this.state.gcodeUploaded &&
@@ -612,7 +777,6 @@ class CncRouter extends React.Component{
                         }
 
                         <div>
-
                             {this.state.gcodeUploading &&
                             <LinearProgress variant="buffer" value={this.state.gcodeUploadedProgress} valueBuffer={this.state.gcodeUploadPrepareProgress} />
                             }
@@ -622,7 +786,6 @@ class CncRouter extends React.Component{
                                 {('Программа загружена успешно')}
                             </Alert>
                             }
-
                         </div>
 
                     </Grid>
@@ -640,9 +803,15 @@ class CncRouter extends React.Component{
 
                 </Grid>
 
-                <Snackbar open={this.state.messageErrorOpened} autoHideDuration={2000} onClose={(e, r) => this.handleSnackbarClose(e, r)}>
+                <Snackbar open={this.state.messageErrorOpened} autoHideDuration={4000} onClose={(e, r) => this.handleSnackbarClose(e, r)}>
                     <Alert severity="error" elevation={6}>
                         {('Контроллер не может принять программу')}
+                    </Alert>
+                </Snackbar>
+
+                <Snackbar open={this.state.messageWarningCROpened} autoHideDuration={4000} onClose={(e, r) => this.handleSnackbarClose(e, r)}>
+                    <Alert severity="warning" elevation={6}>
+                        {('Программы с командой компенсации радиуса инструмента (G41, G42) могут работать не корректно')}
                     </Alert>
                 </Snackbar>
 

@@ -27,6 +27,7 @@ Projects
 # Оборудование 
 
 ## ЧПУ станок плазморез (Plasma cut)
+[Протокол обмена данными по WebSocket](docs/cnc-router.md)
 
 ### Поддерживаемые команды GCode
 

@@ -21,13 +21,10 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 
-// ReactDOM.render(
-//     <React.StrictMode>
-//         <App />
-//     </React.StrictMode>,
-//     document.getElementById('root')
-// );
+// имя используемого оборудования в Equipments.js
+let equipmentName = document.getElementById('root').getAttribute('data-equipment-name');
+
 ReactDOM.render(
-    <App />,
+    <App equipmentName={equipmentName}/>,
     document.getElementById('root')
 );

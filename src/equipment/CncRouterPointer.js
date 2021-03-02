@@ -26,11 +26,11 @@ import IconButton from '@material-ui/core/IconButton';
 import PanToolIcon from '@material-ui/icons/PanTool';
 import ZoomInIcon from '@material-ui/icons/ZoomIn';
 import ZoomOutIcon from '@material-ui/icons/ZoomOut';
+import AllOutIcon from '@material-ui/icons/AllOut';
 import DragIndicatorIcon from '@material-ui/icons/DragIndicator';
 
 import {AppContext} from '../AppContext';
 
-// import CncRouter from './CncRouter';
 import { OBJ_NAME_COORDS } from './CncRouter';
 
 class CncRouterPointer extends React.Component{
@@ -87,11 +87,9 @@ class CncRouterPointer extends React.Component{
      * {@inheritdoc}
      */
     componentDidMount(){
-
         const { item } = this.props;
         const { addListenerWsRecieve } = this.context;
 
-        // console.log(this.refCanvas.current.getContext);
         let canvas = this.refCanvas.current;
         if(canvas.getContext){
             this._ctx = canvas.getContext('2d');
@@ -132,17 +130,46 @@ class CncRouterPointer extends React.Component{
 
                     addListenerWsRecieve(item.name, (data) => {
                         let data2 = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+
+                        let currentPoint = {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0};
+                        const getPos = (letter, offset) => {
+                            let pos = new Float32Array(data.slice(offset, offset+4), 0, 1)[0];
+                            pos = parseFloat(pos.toFixed(2));
+                            switch(letter){
+                                case 'x':
+                                    currentPoint.x = pos;
+                                    break;
+                                case 'y':
+                                    currentPoint.y = pos;
+                                    break;
+                                case 'z':
+                                    currentPoint.z = pos;
+                                    break;
+                                case 'a':
+                                    currentPoint.a = pos;
+                                    break;
+                                case 'b':
+                                    currentPoint.b = pos;
+                                    break;
+                                case 'c':
+                                    currentPoint.c = pos;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        };
+
                         if(data2[0] === OBJ_NAME_COORDS){
-                            let x = new Float32Array(data.slice(2, 6), 0, 1)[0];
-                            let y = new Float32Array(data.slice(6, 10), 0, 1)[0];
-                            let z = new Float32Array(data.slice(10, 14), 0, 1)[0];
-                            // console.log(x, y, z);
-                            console.log( parseInt(x*1e4)/1e4, parseInt(y*1e4)/1e4, parseInt(z*1e4)/1e4);
-                            // x = parseInt(x);
-                            // y = parseInt(y);
-                            x = x.toFixed(2);
-                            y = y.toFixed(2);
-                            this.setCurrentPointer(x, y);
+                            getPos('x', 2);
+                            getPos('y', 6);
+                            getPos('z', 10);
+                            getPos('a', 16);
+                            getPos('b', 20);
+                            getPos('c', 24);
+
+                            console.log(JSON.stringify(currentPoint));
+
+                            this.setCurrentPointer(currentPoint.x, currentPoint.y);
                         }
                     });
                 });
@@ -156,11 +183,9 @@ class CncRouterPointer extends React.Component{
      * {@inheritdoc}
      */
     componentDidUpdate(prevProps){
-
         const { selectedPointer } = this.props;
 
         if(JSON.stringify(this.props.selectedPointer) !== JSON.stringify(prevProps.selectedPointer)){
-            // console.log('selectedPointer', this.props.selectedPointer);
             if(isNaN(selectedPointer.x) || isNaN(selectedPointer.y)){
                 // this.setSelectedPointer(null, null);
                 let selectedPointer = Object.assign({}, this.state.selectedPointer);
@@ -213,21 +238,13 @@ class CncRouterPointer extends React.Component{
      * Перемещение текущих координат при движении мышкой
      */
     handleSelectMouseMove(event){
-
         let oX = event.nativeEvent.offsetX;
         let oY = event.nativeEvent.offsetY;
-
-        // oX += this.state.navLeft;
-        // oY -= this.state.navTop;
-
 
         let mousePointer = Object.assign({}, this.state.mousePointer);
 
         let odX = oX - this.state.navLeft;
         let odY = oY + this.state.navTop;
-
-        // let mouseDeviceX = odX > 0 ? odX/this.canvasWidth*this.itemX : 0;
-        // let mouseDeviceY = odY > 0 ? odY/this.canvasHeight*this.itemY : 0;
 
         let mouseDeviceX = odX/this.canvasWidth*this.itemX;
         let mouseDeviceY = odY/this.canvasHeight*this.itemY;
@@ -235,13 +252,9 @@ class CncRouterPointer extends React.Component{
 
         mouseDeviceY = this.itemY - mouseDeviceY;       // ноль в левом нижнем углу
 
-        // let zoom = 20;
-
         mouseDeviceX /= this.state.zoom;
         mouseDeviceY /= this.state.zoom;
 
-        // mouseDeviceX = parseInt(mouseDeviceX);
-        // mouseDeviceY = parseInt(mouseDeviceY);
         mouseDeviceX = mouseDeviceX.toFixed(3);
         mouseDeviceY = mouseDeviceY.toFixed(3);
 
@@ -249,10 +262,8 @@ class CncRouterPointer extends React.Component{
         mousePointer.screen = {x: oX+50, y: oY+30};
         mousePointer.tooltip = {x: oX+50+20, y: oY+30+20};
         mousePointer.device = {x: mouseDeviceX, y: mouseDeviceY};
-        // console.log(JSON.stringify(mousePointer));
 
         this.setState({mousePointer: mousePointer});
-
     }
 
     /**
@@ -269,7 +280,6 @@ class CncRouterPointer extends React.Component{
      */
     handlePanClick(event){
         this.setState({isPanMode: !this.state.isPanMode});
-        // console.log('В разработке');
     }
 
     /**
@@ -277,7 +287,6 @@ class CncRouterPointer extends React.Component{
      * Опускание клавиши мышки.
      */
     handlePanMouseDown(event){
-        // console.log(event.clientX, event.pageX, event.screenX, event);
         let oX = event.nativeEvent.offsetX;
         let oY = event.nativeEvent.offsetY;
 
@@ -285,9 +294,6 @@ class CncRouterPointer extends React.Component{
         this.navY = oY;
 
         this.navEnable = true;
-        // console.log(oX, oY);
-
-
     }
 
     /**
@@ -302,7 +308,6 @@ class CncRouterPointer extends React.Component{
             let dx = oX - this.navX;
             let dy = oY - this.navY;
 
-            // console.log(dx, dy);
             const { navLeft, navTop } = this.state;
             // console.log(this.props.onChangeNav);
             // this.setState({navLeft: navLeft+dx, navTop: navTop+dy}, () => {
@@ -317,11 +322,12 @@ class CncRouterPointer extends React.Component{
                 this.props.onChangeNav(navLeft+dx, navTop-dy);
             }
 
-            this.setState({navLeft: navLeft+dx, navTop: navTop-dy}, () => {
-                this.navX += dx;
-                this.navY += dy;
-                this.setCurrentPointer(device.x, device.y);
-        });
+            // тормоза при перемещении
+            // this.setState({navLeft: navLeft+dx, navTop: navTop-dy}, () => {
+            //     this.navX += dx;
+            //     this.navY += dy;
+            //     this.setCurrentPointer(device.x, device.y);
+            // });
 
         }
     }
@@ -331,7 +337,6 @@ class CncRouterPointer extends React.Component{
      * Уход мышки за пределы области.
      */
     handlePanMouseLeave(event){
-        
         if(this.navEnable){
             let oX = event.nativeEvent.offsetX;
             let oY = event.nativeEvent.offsetY;
@@ -339,9 +344,7 @@ class CncRouterPointer extends React.Component{
             let dx = oX - this.navX;
             let dy = oY - this.navY;
 
-            // console.log(dx, dy);
             const { navLeft, navTop } = this.state;
-            // console.log(this.props.onChangeNav);
             this.setState({navLeft: navLeft+dx, navTop: navTop-dy});
 
             this.navEnable = false;
@@ -353,20 +356,16 @@ class CncRouterPointer extends React.Component{
      * Поднятие клавиши мышки.
      */
     handlePanMouseUp(event){
-        
         let oX = event.nativeEvent.offsetX;
         let oY = event.nativeEvent.offsetY;
 
         let dx = oX - this.navX;
         let dy = oY - this.navY;
 
-        // console.log(dx, dy);
         const { navLeft, navTop } = this.state;
-        // console.log(this.props.onChangeNav);
         this.setState({navLeft: navLeft+dx, navTop: navTop-dy});
 
         this.navEnable = false;
-
     }
 
     /**
@@ -468,6 +467,26 @@ class CncRouterPointer extends React.Component{
                 this.props.onChangeZoom(zoom);
             }
         });
+    }
+
+    /**
+     * Масштаб и навигация по-умолчанию
+     */
+    handleDefaultClick(event){
+        let zoom = 1;
+        let navLeft = 0;
+        let navTop = 0;
+
+        this.setState({navLeft: navLeft, navTop: navTop, zoom: zoom}, () => {
+            if(typeof this.props.onChangeZoom === "function"){
+                this.props.onChangeZoom(zoom);
+            }
+            if(typeof this.props.onChangeNav === "function"){
+                this.props.onChangeNav(navLeft, navTop);
+            }
+
+        });
+
     }
 
     /**
@@ -603,6 +622,14 @@ class CncRouterPointer extends React.Component{
                     }}>
                         <IconButton color="default" component="span" onClick={e => this.handleZoomOutClick(e)}>
                             <ZoomOutIcon/>
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title={('По-умолчанию')} arrow style={{
+                        position: 'absolute', top: this.state.height+30-3*48, left: this.state.width+50+5,
+                        transformOrigin: '0 0', transform: 'rotate(-90deg)'
+                    }}>
+                        <IconButton color="default" component="span" onClick={e => this.handleDefaultClick(e)}>
+                            <AllOutIcon/>
                         </IconButton>
                     </Tooltip>
                 </React.Fragment>

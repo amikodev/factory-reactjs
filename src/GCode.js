@@ -29,34 +29,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import GCodeCR from './GCodeCompensationRadius';
 import { COMPENSATION_NONE, COMPENSATION_LEFT, COMPENSATION_RIGHT } from './GCodeCompensationRadius';
 
+const letterCodes = {
+    'G': 0x01,
+    'N': 0x02,
+    'M': 0x03,
+    'O': 0x04,
+    
+    'X': 0x11,
+    'Y': 0x12,
+    'Z': 0x13,
+    'A': 0x14,
+    'B': 0x15,
+    'C': 0x16,
+
+    'P': 0x17,
+    'F': 0x18,
+    'S': 0x19,
+    'R': 0x1A,
+    'D': 0x1B,
+    'L': 0x1C,
+    'I': 0x1D,
+    'J': 0x1E,
+    'K': 0x1F
+};
+
 
 var GCode = (function(){
 
     const OBJ_NAME_CNC_GCODE = 0x50;
-
-    let letterCodes = {
-        'G': 0x01,
-        'N': 0x02,
-        'M': 0x03,
-        'O': 0x04,
-        
-        'X': 0x11,
-        'Y': 0x12,
-        'Z': 0x13,
-        'A': 0x14,
-        'B': 0x15,
-        'C': 0x16,
-
-        'P': 0x17,
-        'F': 0x18,
-        'S': 0x19,
-        'R': 0x1A,
-        'D': 0x1B,
-        'L': 0x1C,
-        'I': 0x1D,
-        'J': 0x1E,
-        'K': 0x1F
-    };
 
     const COORD_ABSOLUTE = 0;
     const COORD_RELATIVE = 1;
@@ -91,7 +91,9 @@ var GCode = (function(){
     let _cmds = null;
     let _datas = null;
 
-    let _zoom = 1;
+    let _canvasZoom = 1;
+    let _manualZoom = 1;
+    let _zoom = _canvasZoom * _manualZoom;
     let _navLeft = 0;
     let _navTop = 0;
 
@@ -133,6 +135,7 @@ var GCode = (function(){
                 break;
             case 2:     // G02 - Круговая интерполяция по часовой стрелке
                 progParams.runType = RUN_WORK_CW;
+                progParams.circle.inc = {I: 0, J: 0, K: 0};
                 frame.map(cmd => {
                     switch(cmd[0]){
                         case 'R':
@@ -158,6 +161,7 @@ var GCode = (function(){
                 break;
             case 3:     // G03 - Круговая интерполяция против часовой стрелки
                 progParams.runType = RUN_WORK_CCW;
+                progParams.circle.inc = {I: 0, J: 0, K: 0};
                 frame.map(cmd => {
                     switch(cmd[0]){
                         case 'R':
@@ -333,6 +337,57 @@ var GCode = (function(){
         return processThisCommand;
     };
 
+    /**
+     * Рисование сетки
+     */
+    const drawGrid = () => {
+        if(_ctx === null)
+            return;
+
+        // очистка Canvas
+        _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
+
+        _ctx.lineWidth = 1;
+
+        let minorStyle = {dash: [10, 4], color: "#CCC"};
+        let majorStyle = {dash: [10, 0], color: "#777"};
+
+        let minorWidth = 100;
+        let majorWidth = minorWidth*4;
+        let cx = _canvas.width/_zoom / minorWidth;
+        let left = (_navLeft/_zoom)%minorWidth;
+        let cy = _canvas.height/_zoom / minorWidth;
+        let top = (_navTop/_zoom)%minorWidth;
+        
+        for(let i=0; i<=cx; i++){
+            // console.log([left, left%majorWidth]);
+            // let lineStyle = left%majorWidth === 0 ? majorStyle : minorStyle;
+            let lineStyle = minorStyle;
+            _ctx.beginPath();
+            _ctx.moveTo(left*_zoom, 0);
+            _ctx.lineTo(left*_zoom, _canvas.height);
+            _ctx.setLineDash(lineStyle.dash);
+            _ctx.strokeStyle = lineStyle.color;
+            _ctx.stroke();
+
+            left += minorWidth;
+        }
+
+        for(let i=0; i<=cy; i++){
+            // console.log([left, left%majorWidth]);
+            // let lineStyle = left%majorWidth === 0 ? majorStyle : minorStyle;
+            let lineStyle = minorStyle;
+            _ctx.beginPath();
+            _ctx.moveTo(0, top*_zoom);
+            _ctx.lineTo(_canvas.width, top*_zoom);
+            _ctx.setLineDash(lineStyle.dash);
+            _ctx.strokeStyle = lineStyle.color;
+            _ctx.stroke();
+
+            top += minorWidth;
+        }
+
+    }
 
     /**
      * Рисование фигуры
@@ -341,10 +396,8 @@ var GCode = (function(){
         if(_ctx === null)
             return;
 
-        // очистка Canvas
-        _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
-
-        // progParams.compensationLastPoint = null;
+        // // очистка Canvas
+        // _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
 
         let lastPath = {
             path: null,
@@ -560,7 +613,7 @@ var GCode = (function(){
                             let angle3 = lastPathBySide.anglePerp;
                             let angle4 = anglePerp;
 
-                            // console.log({angle3:angle3*180/Math.PI, angle4:angle4*180/Math.PI, da:Math.abs(angle4-angle3)*180/Math.PI});
+                            // console.log({p1, angleLines: GCodeCR.getAngle2(lastEndPoint, p1), angle3:angle3*180/Math.PI, angle4:angle4*180/Math.PI, da:Math.abs(angle4-angle3)*180/Math.PI});
                             if(Math.abs(angle4-angle3) >= 0.0174 && Math.abs(angle4-angle3) <= 6.2657){     // > 1 градуса
                                 _ctx.beginPath();
                                 _ctx.arc(p1.x*_zoom+_navLeft, p1.y*_zoom+_navTop, length*_zoom, angle3, angle4, side === COMPENSATION_LEFT ? true : false);
@@ -834,6 +887,15 @@ var GCode = (function(){
                 }
             }
 
+            if(progParams.runType === RUN_WORK_CW || progParams.runType === RUN_WORK_CCW){
+                frame.map(el => {
+                    if(!processFrame)
+                        return null;
+
+                        progParams.circle.inc = {I: 0, J: 0, K: 0};
+                });
+            }
+
             frame.map(el => {
                 // console.log('el', el);
                 let letter = el[0];
@@ -1049,7 +1111,7 @@ var GCode = (function(){
 
         _datas = datas;
 
-        return {validate: true, data: datas};
+        return {validate: true, data: datas, cmds};
     }
 
     /**
@@ -1077,7 +1139,24 @@ var GCode = (function(){
      * @param zoom масштаб
      */
     const setCanvasZoom = zoom => {
-        _zoom = zoom;
+        _canvasZoom = zoom;
+        _zoom = _canvasZoom * _manualZoom;
+    }
+
+    /**
+     * Установка ручного масштаба
+     * @param zoom масштаб
+     */
+    const setManualZoom = zoom => {
+        _manualZoom = zoom;
+        _zoom = _canvasZoom * _manualZoom;
+    }
+
+    /**
+     * Получение ручного масштаба
+     */
+    const getManualZoom = () => {
+        return _manualZoom;
     }
 
     /**
@@ -1094,13 +1173,16 @@ var GCode = (function(){
         parse,
         setCanvas,
         draw,
+        drawGrid,
         setUserZeroPoint,
         setCanvasZoom,
         setCanvasNav,
+        setManualZoom,
+        getManualZoom,
     };
 })();
 
 
 export default GCode;
 
-
+export { letterCodes };
