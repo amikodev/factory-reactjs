@@ -118,10 +118,10 @@ class App extends React.Component{
             equipmentSettingsComponent: componentSettings,
         }, () => {
 
-            if(autoChangeTab)
+            if(autoChangeTab && this.mainMenuRef.current !== null)
                 this.mainMenuRef.current.changeTab(TAB_EQUIPMENT);
 
-            // console.log(component);
+            document.title = item.caption;
         });
     }
 
@@ -331,6 +331,7 @@ class App extends React.Component{
 
         return (
             <div className="App">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
                 <AppContext.Provider value={{
                     addListenerWsRecieve: this.addListenerWsRecieve,
                     removeListenerWsRecieve: this.removeListenerWsRecieve,

@@ -455,8 +455,10 @@ class CncRouter extends React.Component{
     componentDidMount(){
         this.addListeners();
         
-        let canvas = this.refCncRouterPointer.current.getCanvasRef().current;
-        GCode.setCanvas(canvas);
+        if(this.refCncRouterPointer.current !== null){
+            let canvas = this.refCncRouterPointer.current.getCanvasRef().current;
+            GCode.setCanvas(canvas);
+        }
 
         let gcodeContent = localStorage.getItem('gcodeContent');
         if(gcodeContent !== null){
@@ -753,6 +755,7 @@ class CncRouter extends React.Component{
                                         "f3.gcode", "f3.ncr.gcode",
                                         "f4.gcode", "f4.ncr.gcode",
                                         "f5.gcode", "f5.ncr.gcode",
+                                        "tc.gcode", "tr.gcode", "tl.gcode", "steps.gcode",
                                     ].map(fname => {
                                         return (
                                             <MenuItem value={fname} key={fname}>{fname}</MenuItem>

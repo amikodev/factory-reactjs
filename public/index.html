@@ -1,25 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" manifest="index.appcache">
 
 <head>
     <meta charset="utf-8" />
     <!-- <link rel="icon" href="%PUBLIC_URL%/favicon.ico" /> -->
-    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="CNC Router" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" sizes="180x180" />
 
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
     <!-- <link rel="icon" type="image/png" href="%PUBLIC_URL%/cnc-ico-16.png" /> -->
     <link rel="icon" type="image/ico" href="%PUBLIC_URL%/cnc-ico-16.ico" />
 
+    <meta http-equiv="Cache-control" content="max-age=3600" />
+
     <title>CNC Equipments</title>
 
     <style>
         * {
             touch-action: manipulation;
+            /* touch-action: none; */
+
+   -webkit-touch-callout: none; /* iOS Safari */
+     -webkit-user-select: none; /* Safari */
+      -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Old versions of Firefox */
+         -ms-user-select: none; /* Internet Explorer/Edge */
+             user-select: none; /* Non-prefixed version, currently
+                                   supported by Chrome, Edge, Opera and Firefox */
+
         }
+
+        div.MuiTextField-root input{
+   -webkit-touch-callout: auto;
+     -webkit-user-select: auto;
+      -khtml-user-select: auto;
+        -moz-user-select: auto;
+         -ms-user-select: auto;
+             user-select: auto;
+
+        }
+
     </style>
 
 </head>
