@@ -246,6 +246,27 @@ class App extends React.Component{
         return hexArr;
     }
 
+    getPointXYZ(data, offset){
+        let point = {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0};
+        ['x', 'y', 'z'].map((letter, ind) => {
+            let offs = offset + ind*4;
+            let val = new Float32Array(data.slice(offs, offs+4), 0, 1)[0];
+            val = parseFloat(val.toFixed(2));
+            point[letter] = val;
+        })
+        return point;
+    }
+
+    getPoint(data, offset){
+        let point = {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0};
+        ['x', 'y', 'z', 'a', 'b', 'c'].map((letter, ind) => {
+            let offs = offset + ind*4;
+            let val = new Float32Array(data.slice(offs, offs+4), 0, 1)[0];
+            val = parseFloat(val.toFixed(2));
+            point[letter] = val;
+        })
+        return point;
+    }    
 
     componentDidMount(){
 
@@ -338,6 +359,8 @@ class App extends React.Component{
                     wsPrepareData: this.wsPrepareData,
                     concatenateBuffer: this.concatenateBuffer,
                     floatToArray: this.floatToArray,
+                    getPoint: this.getPoint,
+                    getPointXYZ: this.getPointXYZ,
                 }}>
                     <MainMenu ref={this.mainMenuRef} items={menuItems} />
                     {/* <MainMenu ref={this.mainMenuRef} items={[

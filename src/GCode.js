@@ -53,6 +53,8 @@ const letterCodes = {
     'K': 0x1F
 };
 
+const COORD_SYSTEM_NULL = 0;
+const COORD_SYSTEM_USER = 1;
 
 var GCode = (function(){
 
@@ -104,7 +106,6 @@ var GCode = (function(){
         currentCoord: {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},     // текущие координаты (абсолютные)
         targetCoord:  {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},     // целевые координаты (абсолютные или относительные, в зависимости от coordSystem)
         offsetCoord: {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},      // координаты смещения (G92)
-        userZeroPoint: {X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0},    // координаты пользовательского "нуля"
         unit: UNIT_METRIC,                                      // единицы измерения
         circle: {
             type: CIRCLE_RADIUS,                                // тип окружности (CIRCLE_RADIUS, CIRCLE_INC)
@@ -123,7 +124,15 @@ var GCode = (function(){
         pause: 0.0,                                             // пауза задаваемая командой G04, в секундах
     };
 
-
+    /**
+     * Системы координат
+     */
+    let coordSystems = {
+        [COORD_SYSTEM_NULL]: {x: 0, y: 0},
+        [COORD_SYSTEM_USER]: {x: 0, y: 0},
+    };
+    
+    
     const command_G = (value, frame) => {
         let processThisCommand = true;
         switch(value){
@@ -390,6 +399,59 @@ var GCode = (function(){
     }
 
     /**
+     * Рисование осей
+     */
+    const drawCoordSystem = (coordSystem) => {
+
+        let zeroSize = 100;
+        let userSize = 50;
+
+        let zeroArrSize = 5;
+        let userArrSize = 5;
+
+        let cs = coordSystems[coordSystem];
+        let size = 0;
+        let arrSize = 0;
+
+        // console.log(coordSystems);
+        if(coordSystem == COORD_SYSTEM_NULL){
+            size = zeroSize;
+            arrSize = zeroArrSize;
+
+        } else if(coordSystem == COORD_SYSTEM_USER){
+            size = userSize;
+            arrSize = userArrSize;
+        }
+
+
+        _ctx.beginPath();
+        _ctx.moveTo(cs.x*_zoom+_navLeft, cs.y*_zoom+_navTop);
+        _ctx.lineTo(cs.x*_zoom+_navLeft+size, cs.y*_zoom+_navTop);
+
+        _ctx.lineTo(cs.x*_zoom+_navLeft+size-arrSize, cs.y*_zoom+_navTop+arrSize);
+        _ctx.lineTo(cs.x*_zoom+_navLeft+size-arrSize, cs.y*_zoom+_navTop-arrSize);
+        _ctx.lineTo(cs.x*_zoom+_navLeft+size, cs.y*_zoom+_navTop);
+
+        _ctx.setLineDash([]);
+        _ctx.strokeStyle = "#B00";
+        _ctx.stroke();
+
+        _ctx.beginPath();
+        _ctx.moveTo(cs.x*_zoom+_navLeft, cs.y*_zoom+_navTop);
+        _ctx.lineTo(cs.x*_zoom+_navLeft, cs.y*_zoom+_navTop+size);
+
+        _ctx.lineTo(cs.x*_zoom+_navLeft-arrSize, cs.y*_zoom+_navTop+size-arrSize);
+        _ctx.lineTo(cs.x*_zoom+_navLeft+arrSize, cs.y*_zoom+_navTop+size-arrSize);
+        _ctx.lineTo(cs.x*_zoom+_navLeft, cs.y*_zoom+_navTop+size);
+
+        _ctx.setLineDash([]);
+        _ctx.strokeStyle = "#0B0";
+        _ctx.stroke();
+
+
+    }
+
+    /**
      * Рисование фигуры
      */
     const draw = () => {
@@ -415,12 +477,12 @@ var GCode = (function(){
             let dash = pParams.runType === RUN_FAST ? [4, 4] : [];
 
             let p1 = {
-                x: pParams.currentCoord.X + pParams.userZeroPoint.X,
-                y: pParams.currentCoord.Y + pParams.userZeroPoint.Y
+                x: pParams.currentCoord.X + coordSystems[COORD_SYSTEM_USER].x,
+                y: pParams.currentCoord.Y + coordSystems[COORD_SYSTEM_USER].y
             };
             let p2 = {
-                x: targetX + pParams.userZeroPoint.X,
-                y: targetY + pParams.userZeroPoint.Y
+                x: targetX + coordSystems[COORD_SYSTEM_USER].x,
+                y: targetY + coordSystems[COORD_SYSTEM_USER].y
             };
 
             GCodeCR.drawPoint({x: p1.x*_zoom+_navLeft, y: p1.y*_zoom+_navTop}, "#444");
@@ -498,16 +560,16 @@ var GCode = (function(){
             let pParams = pMoveParams.pParams;
 
             let p1 = {
-                x: pParams.currentCoord.X + pParams.userZeroPoint.X,
-                y: pParams.currentCoord.Y + pParams.userZeroPoint.Y
+                x: pParams.currentCoord.X + coordSystems[COORD_SYSTEM_USER].x,
+                y: pParams.currentCoord.Y + coordSystems[COORD_SYSTEM_USER].y
             };
             let p2 = {
-                x: targetX + pParams.userZeroPoint.X,
-                y: targetY + pParams.userZeroPoint.Y
+                x: targetX + coordSystems[COORD_SYSTEM_USER].x,
+                y: targetY + coordSystems[COORD_SYSTEM_USER].y
             };
             let p3 = {
-                x: pMoveNextParams.target.x + pParams.userZeroPoint.X,
-                y: pMoveNextParams.target.y + pParams.userZeroPoint.Y
+                x: pMoveNextParams.target.x + coordSystems[COORD_SYSTEM_USER].x,
+                y: pMoveNextParams.target.y + coordSystems[COORD_SYSTEM_USER].y
             };
 
             GCodeCR.drawPoint({x: p1.x*_zoom+_navLeft, y: p1.y*_zoom+_navTop}, "#444");
@@ -519,8 +581,8 @@ var GCode = (function(){
 
             // point center
             let pc = {
-                x: cp.center.x + pParams.userZeroPoint.X,
-                y: cp.center.y + pParams.userZeroPoint.Y
+                x: cp.center.x,
+                y: cp.center.y
             };
 
             // console.log('circle', ++debugCircleCount, cp, {angle1:cp.angle1*180/Math.PI, angle2:cp.angle2*180/Math.PI});
@@ -1131,7 +1193,7 @@ var GCode = (function(){
      * @param point точка пользовательского "нуля"
      */
     const setUserZeroPoint = point => {
-        progParams.userZeroPoint = Object.assign({X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0}, point);
+        coordSystems[COORD_SYSTEM_USER] = Object.assign({x: 0, y: 0, z: 0, a: 0, b: 0, c: 0}, point);
     }
 
     /**
@@ -1174,6 +1236,7 @@ var GCode = (function(){
         setCanvas,
         draw,
         drawGrid,
+        drawCoordSystem,
         setUserZeroPoint,
         setCanvasZoom,
         setCanvasNav,
@@ -1185,4 +1248,7 @@ var GCode = (function(){
 
 export default GCode;
 
-export { letterCodes };
+export { 
+    letterCodes, 
+    COORD_SYSTEM_NULL, COORD_SYSTEM_USER,
+};

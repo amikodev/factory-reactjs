@@ -58,6 +58,7 @@ import CncRouterPlasmaArc from './CncRouterPlasmaArc';
 
 import GCode from '../GCode';
 import { letterCodes } from '../GCode';
+import { COORD_SYSTEM_NULL, COORD_SYSTEM_USER } from '../GCode';
 
 
 import { withStyles } from '@material-ui/core/styles';
@@ -66,6 +67,7 @@ const useStyles = theme => ({
     root: {
         '& .MuiTextField-root': {
             margin: theme.spacing(1),
+            width: '-webkit-fill-available',
         },
         '& .MuiButton-root': {
             margin: theme.spacing(1),
@@ -90,6 +92,16 @@ const useStyles = theme => ({
         width: 200,
 
     },
+    coordOuter: {
+        position: 'relative',
+        '& .currentCoord': {
+            position: 'absolute',
+            bottom: theme.spacing(1),
+            right: theme.spacing(2),
+            fontSize: '0.75rem',
+            color: 'rgba(0, 0, 0, 0.54)',
+        },
+    },
 });
 
 
@@ -100,6 +112,7 @@ const OBJ_NAME_AXE = 0x52;
 const OBJ_NAME_COORDS = 0x53;
 const OBJ_NAME_COORD_TARGET = 0x54;
 const OBJ_NAME_PLASMA_ARC = 0x55;
+const OBJ_NAME_COORD_SYSTEM = 0x56;
 
 // const CMD_READ = 0x01;
 // const CMD_WRITE = 0x02;
@@ -132,6 +145,7 @@ class CncRouter extends React.Component{
         this.handlePlasmaArcDoStart = this.handlePlasmaArcDoStart.bind(this);
         this.handleOpenGcode = this.handleOpenGcode.bind(this);
         this.getPointerCanvas = this.getPointerCanvas.bind(this);
+        this.gcodeDrawAll = this.gcodeDrawAll.bind(this);
 
         this.wsStateChange = this.wsStateChange.bind(this);
 
@@ -139,7 +153,7 @@ class CncRouter extends React.Component{
 
             selX: '',
             selY: '',
-            selZ: -150.0,
+            selZ: '',
 
             gcodeLines: [],
             currentGcodeLine: 3,
@@ -160,6 +174,9 @@ class CncRouter extends React.Component{
 
             wsStateConnect: Equipments.STATE_NONE,
 
+            currentPoint: null,
+            userZeroPoint: {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0},
+
         };
 
         this.refCncRouterPointer = React.createRef();
@@ -169,6 +186,7 @@ class CncRouter extends React.Component{
 
         this.listenerRunGcodeInd = null;
         this.listenerStopGcodeInd = null;
+        this.listenerSystemCoordInd = null;
 
     }
 
@@ -176,7 +194,7 @@ class CncRouter extends React.Component{
         this.setState({
             selX: point.x,
             selY: point.y,
-            // selZ: point.z,
+            selZ: 0,
         });
     }
 
@@ -189,16 +207,66 @@ class CncRouter extends React.Component{
     handleSelectedRun(event){
         const { wsPrepareData, floatToArray } = this.context;
         const { item } = this.props;
-        const { selX, selY, selZ} = this.state;
+        const { selX, selY, selZ } = this.state;
+        const { userZeroPoint } = this.state;
 
-        let point = {x: selX, y: selY, z: selZ};
+        let vselX = parseFloat(selX);
+        let vselY = parseFloat(selY);
+        let vselZ = parseFloat(selZ);
+
+        if(isNaN(vselX) || isNaN(vselY) || isNaN(vselZ))
+            return;
+
+        let point = {
+            x: vselX + userZeroPoint.x, 
+            y: vselY + userZeroPoint.y, 
+            z: vselZ + userZeroPoint.z
+        };
         console.log('run', JSON.stringify(point));
 
         let data = [OBJ_NAME_COORD_TARGET, CMD_RUN];
         data = data
-            .concat(floatToArray(selX))
-            .concat(floatToArray(selY))
-            .concat(floatToArray(selZ))
+            .concat(floatToArray(point.x))
+            .concat(floatToArray(point.y))
+            .concat(floatToArray(point.z))
+        ;
+
+        let ws = window.Equipments.getItemWs(item.name);
+
+        ws.send(wsPrepareData(data));
+    }
+
+    /**
+     * Установить пользовательский ноль
+     */
+    handleSetUserZero(event){
+        const { wsPrepareData, floatToArray } = this.context;
+        const { item } = this.props;
+        const { selX, selY, selZ } = this.state;
+        const { currentPoint, userZeroPoint } = this.state;
+
+        let vselX = parseFloat(selX);
+        let vselY = parseFloat(selY);
+        let vselZ = parseFloat(selZ);
+
+        let point = null;
+        if(!isNaN(vselX) && !isNaN(vselY) && !isNaN(vselZ)){
+            point = {
+                x: vselX + userZeroPoint.x, 
+                y: vselY + userZeroPoint.y, 
+                z: vselZ + userZeroPoint.z
+            };
+        } else if(currentPoint !== null){
+            point = currentPoint;
+        }
+
+        // console.log('set user zero', JSON.stringify(point));
+
+        let data = [OBJ_NAME_COORD_SYSTEM, (1 << 7) + COORD_SYSTEM_USER];
+        data = data
+            .concat(floatToArray(point.x))
+            .concat(floatToArray(point.y))
+            .concat(floatToArray(point.z))
         ;
 
         let ws = window.Equipments.getItemWs(item.name);
@@ -207,7 +275,7 @@ class CncRouter extends React.Component{
     }
 
     handleSelectedCancel(event){
-        this.setState({selX: '', selY: ''});
+        this.setState({selX: '', selY: '', selZ: ''});
     }
 
     handleOpenGcode(event){
@@ -268,8 +336,7 @@ class CncRouter extends React.Component{
         this.gcodeAnalyseCompensationRadius(parsed.cmds);
 
         try{
-            GCode.drawGrid();
-            GCode.draw();
+            this.gcodeDrawAll();
         } catch(e){
             console.log('ERROR');
             console.log(e);
@@ -368,6 +435,7 @@ class CncRouter extends React.Component{
 
     addListeners(){
         const { wsPrepareData, addListenerWsRecieve, removeListenerWsRecieve } = this.context;
+        const { getPointXYZ } = this.context;
         const { item } = this.props;
 
         // listener run gcode
@@ -396,6 +464,26 @@ class CncRouter extends React.Component{
                             this.setState({gcodeRunned: false});
                         }
                     }
+                }
+            });
+        }
+
+        // listener coord system
+        if(this.listenerSystemCoordInd === null){
+            this.listenerSystemCoordInd = addListenerWsRecieve(item.name, data => {
+                let data2 = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+                if(data2[0] === OBJ_NAME_COORDS){
+                    let currentPoint = getPointXYZ(data, 2);
+                    console.log('currentPoint', JSON.stringify(currentPoint));
+                    this.setState({currentPoint});
+                } else if(data2[0] === OBJ_NAME_COORD_SYSTEM){
+
+                    let userZeroPoint = getPointXYZ(data, 2);
+                    console.log('userZeroPoint', JSON.stringify(userZeroPoint));
+                    this.setState({userZeroPoint, selX: '', selY: '', selZ: ''});
+
+                    GCode.setUserZeroPoint(userZeroPoint);
+                    this.gcodeDrawAll();
                 }
             });
         }
@@ -490,14 +578,19 @@ class CncRouter extends React.Component{
     handlePointerChangeZoom(zoom){
         GCode.setCanvasZoom(this.refCncRouterPointer.current.calcCanvasZoom());
         GCode.setManualZoom(zoom);
-        GCode.drawGrid();
-        GCode.draw();
+        this.gcodeDrawAll();
         this.setState({pointerZoom: zoom});
     }
 
     handlePointerChangeNav(left, top){
         GCode.setCanvasNav(left, top);
+        this.gcodeDrawAll();
+    }
+
+    gcodeDrawAll(){
         GCode.drawGrid();
+        GCode.drawCoordSystem(COORD_SYSTEM_NULL);
+        GCode.drawCoordSystem(COORD_SYSTEM_USER);
         GCode.draw();
     }
 
@@ -595,6 +688,8 @@ class CncRouter extends React.Component{
         });
 
         ws.send(wsPrepareData( [OBJ_NAME_CNC_ROUTER] ));
+
+        ws.send(wsPrepareData( [OBJ_NAME_COORD_SYSTEM, COORD_SYSTEM_USER] ));
     }
 
     wsStateChange(wsEventType){
@@ -622,6 +717,7 @@ class CncRouter extends React.Component{
     render(){
 
         const { item, classes } = this.props;
+        const { userZeroPoint, currentPoint } = this.state;
 
         let inputGcodeID = "cncRouter_"+item.name+"_gcode";
 
@@ -639,7 +735,11 @@ class CncRouter extends React.Component{
                             ref={this.refCncRouterPointer}
                             item={item} 
                             onSelectPointer={(point) => this.handleSelectPointer(point)} 
-                            selectedPointer={{x: parseFloat(this.state.selX), y: parseFloat(this.state.selY)}}
+                            selectedPointer={{
+                                x: parseFloat(this.state.selX), 
+                                y: parseFloat(this.state.selY),
+                                z: parseFloat(this.state.selZ),
+                            }}
                             onReady={() => this.handlePointerReady()}
                             onChangeZoom={(zoom) => this.handlePointerChangeZoom(zoom)}
                             onChangeNav={(left, top) => this.handlePointerChangeNav(left, top)}
@@ -659,11 +759,27 @@ class CncRouter extends React.Component{
                                 {('Выбранные координаты')}
                             </Typography>
                             <form className={classes.root} noValidate autoComplete='off'>
-                                <TextField label="X" type="number" InputLabelProps={{ shrink: true, }} variant="outlined" value={this.state.selX} onChange={e => this.handleSelectInputChange(e, 'selX')} />
-                                <TextField label="Y" type="number" InputLabelProps={{ shrink: true, }} variant="outlined" value={this.state.selY} onChange={e => this.handleSelectInputChange(e, 'selY')} />
-                                <TextField label="Z" type="number" InputLabelProps={{ shrink: true, }} variant="outlined" value={this.state.selZ} onChange={e => this.handleSelectInputChange(e, 'selZ')} />
+                                <div className={classes.coordOuter}>
+                                    <TextField label={"X ["+userZeroPoint.x+"]"} type="number" InputLabelProps={{ shrink: true, }} variant="outlined" value={this.state.selX} onChange={e => this.handleSelectInputChange(e, 'selX')} />
+                                    {currentPoint !== null &&
+                                        <div className="currentCoord"> {currentPoint.x} </div>
+                                    }
+                                </div>
+                                <div className={classes.coordOuter}>
+                                    <TextField label={"Y ["+userZeroPoint.y+"]"} type="number" InputLabelProps={{ shrink: true, }} variant="outlined" value={this.state.selY} onChange={e => this.handleSelectInputChange(e, 'selY')} />
+                                    {currentPoint !== null &&
+                                        <div className="currentCoord"> {currentPoint.y} </div>
+                                    }
+                                </div>
+                                <div className={classes.coordOuter}>
+                                    <TextField label={"Z ["+userZeroPoint.z+"]"} type="number" InputLabelProps={{ shrink: true, }} variant="outlined" value={this.state.selZ} onChange={e => this.handleSelectInputChange(e, 'selZ')} />
+                                    {currentPoint !== null &&
+                                        <div className="currentCoord"> {currentPoint.z} </div>
+                                    }
+                                </div>
 
                                 <Button variant="contained" color="primary" disabled={isNaN(parseFloat(this.state.selX))} onClick={e => this.handleSelectedRun(e)}>{('Поехали')}</Button>
+                                <Button variant="contained" disabled={isNaN(parseFloat(this.state.selX)) && this.state.currentPoint === null} onClick={e => this.handleSetUserZero(e)}>{('Установить ноль')}</Button>
                                 <Button variant="contained" onClick={e => this.handleSelectedCancel(e)}>{('Отменить')}</Button>
 
 
@@ -838,6 +954,7 @@ export {
     OBJ_NAME_COORDS,
     OBJ_NAME_COORD_TARGET,
     OBJ_NAME_PLASMA_ARC,
+    OBJ_NAME_COORD_SYSTEM,
 
     CMD_RUN,
     CMD_STOP,

@@ -31,7 +31,7 @@ import DragIndicatorIcon from '@material-ui/icons/DragIndicator';
 
 import {AppContext} from '../AppContext';
 
-import { OBJ_NAME_COORDS } from './CncRouter';
+import { OBJ_NAME_COORDS, OBJ_NAME_COORD_SYSTEM } from './CncRouter';
 
 class CncRouterPointer extends React.Component{
 
@@ -67,6 +67,8 @@ class CncRouterPointer extends React.Component{
             navLeft: 0,             // навигация, смещение слева
             navTop: 0,              // навигация, смещение сверху
 
+            userZeroPoint: {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0},
+
         };
 
         this.refCanvas = React.createRef();
@@ -87,8 +89,9 @@ class CncRouterPointer extends React.Component{
      * {@inheritdoc}
      */
     componentDidMount(){
-        const { item } = this.props;
         const { addListenerWsRecieve } = this.context;
+        const { getPointXYZ } = this.context;
+        const { item } = this.props;
 
         let canvas = this.refCanvas.current;
         if(canvas.getContext){
@@ -130,46 +133,16 @@ class CncRouterPointer extends React.Component{
 
                     addListenerWsRecieve(item.name, (data) => {
                         let data2 = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-
-                        let currentPoint = {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0};
-                        const getPos = (letter, offset) => {
-                            let pos = new Float32Array(data.slice(offset, offset+4), 0, 1)[0];
-                            pos = parseFloat(pos.toFixed(2));
-                            switch(letter){
-                                case 'x':
-                                    currentPoint.x = pos;
-                                    break;
-                                case 'y':
-                                    currentPoint.y = pos;
-                                    break;
-                                case 'z':
-                                    currentPoint.z = pos;
-                                    break;
-                                case 'a':
-                                    currentPoint.a = pos;
-                                    break;
-                                case 'b':
-                                    currentPoint.b = pos;
-                                    break;
-                                case 'c':
-                                    currentPoint.c = pos;
-                                    break;
-                                default:
-                                    break;
-                            }
-                        };
-
                         if(data2[0] === OBJ_NAME_COORDS){
-                            getPos('x', 2);
-                            getPos('y', 6);
-                            getPos('z', 10);
-                            getPos('a', 16);
-                            getPos('b', 20);
-                            getPos('c', 24);
-
-                            console.log(JSON.stringify(currentPoint));
-
+                            let currentPoint = getPointXYZ(data, 2);
+                            // console.log('currentPoint', JSON.stringify(currentPoint));
                             this.setCurrentPointer(currentPoint.x, currentPoint.y);
+                        } else if(data2[0] === OBJ_NAME_COORD_SYSTEM){
+                            let userZeroPoint = getPointXYZ(data, 2);
+                            // console.log('userZeroPoint', JSON.stringify(userZeroPoint));
+                            let selectedPointer = Object.assign({}, this.state.selectedPointer);
+                            selectedPointer.screen = null;
+                            this.setState({userZeroPoint, selectedPointer});
                         }
                     });
                 });
@@ -204,6 +177,8 @@ class CncRouterPointer extends React.Component{
         let oX = event.nativeEvent.offsetX;
         let oY = event.nativeEvent.offsetY;
 
+        const { userZeroPoint } = this.state;
+
         let selectedPointer = Object.assign({}, this.state.selectedPointer);
 
         let odX = oX - this.state.navLeft;
@@ -217,8 +192,11 @@ class CncRouterPointer extends React.Component{
         mouseDeviceX /= this.state.zoom;
         mouseDeviceY /= this.state.zoom;
 
-        mouseDeviceX = parseInt(mouseDeviceX);
-        mouseDeviceY = parseInt(mouseDeviceY);
+        mouseDeviceX -= userZeroPoint.x;
+        mouseDeviceY -= userZeroPoint.y;
+
+        mouseDeviceX = mouseDeviceX.toFixed(3);
+        mouseDeviceY = mouseDeviceY.toFixed(3);
 
         // mousePointer.offset = {x: oX, y: oY};
         selectedPointer.screen = {x: oX+50, y: oY+30};
@@ -241,6 +219,8 @@ class CncRouterPointer extends React.Component{
         let oX = event.nativeEvent.offsetX;
         let oY = event.nativeEvent.offsetY;
 
+        const { userZeroPoint } = this.state;
+
         let mousePointer = Object.assign({}, this.state.mousePointer);
 
         let odX = oX - this.state.navLeft;
@@ -254,6 +234,9 @@ class CncRouterPointer extends React.Component{
 
         mouseDeviceX /= this.state.zoom;
         mouseDeviceY /= this.state.zoom;
+
+        mouseDeviceX -= userZeroPoint.x;
+        mouseDeviceY -= userZeroPoint.y;
 
         mouseDeviceX = mouseDeviceX.toFixed(3);
         mouseDeviceY = mouseDeviceY.toFixed(3);
@@ -372,6 +355,8 @@ class CncRouterPointer extends React.Component{
      * Показать не экране текущие координаты
      */
     setCurrentPointer(devX, devY){
+        const { userZeroPoint } = this.state;
+
         let oX = devX*this.canvasWidth/this.itemX;
         let oY = devY*this.canvasHeight/this.itemY;
 
@@ -390,6 +375,12 @@ class CncRouterPointer extends React.Component{
         tY = tY > this.canvasHeight ? this.canvasHeight : (tY-70 < 0 ? 70 : tY);
         tY += 30;
 
+        devX -= userZeroPoint.x;
+        devY -= userZeroPoint.y;
+
+        devX = devX.toFixed(2);
+        devY = devY.toFixed(2);
+
         currentPointer.screen = {x: oX+50, y: oY+30};       // координаты перекрестия точки
         currentPointer.tooltip = {x: tX, y: tY};            // координаты окошка со значениями координат
         currentPointer.device = {x: devX, y: devY};         // значения координат
@@ -401,6 +392,11 @@ class CncRouterPointer extends React.Component{
      * Показать на экране выбранные координаты
      */
     setSelectedPointer(devX, devY){
+        const { userZeroPoint } = this.state;
+
+        devX += userZeroPoint.x;
+        devY += userZeroPoint.y;
+
         let oX = devX*this.canvasWidth/this.itemX;
         let oY = devY*this.canvasHeight/this.itemY;
 
@@ -590,6 +586,11 @@ class CncRouterPointer extends React.Component{
                     onMouseLeave ={e => this.state.isPanMode ? this.handlePanMouseLeave(e) : this.handleSelectMouseLeave(e)}
                     onMouseUp    ={e => this.state.isPanMode ? this.handlePanMouseUp(e) : this.handleSelectMouseUp(e)} 
                     onMouseDown  ={e => this.state.isPanMode ? this.handlePanMouseDown(e) : null} 
+                    
+                    // onTouchMove  ={e => this.state.isPanMode ? this.handlePanMouseMove(e) : this.handleSelectMouseMove(e)}
+                    // onTouchEnd   ={e => this.state.isPanMode ? this.handlePanMouseUp(e) : this.handleSelectMouseUp(e)} 
+                    // onTouchStart ={e => this.state.isPanMode ? this.handlePanMouseDown(e) : null} 
+                    
                     style={{
                         position: 'absolute', top: 30, left: 50, width: this.state.width, height: this.state.height, 
                         backgroundColor: 'white', opacity: 0.0, 
