@@ -352,6 +352,58 @@ class CncRouterPointer extends React.Component{
     }
 
     /**
+     * Режим масштабирования и навигации.
+     * Прикосновение.
+     */
+     handlePanTouchStart(event){
+        let touch = event.targetTouches[0];
+
+        let oX = touch.pageX;
+        let oY = touch.pageY;
+
+        this.navX = oX;
+        this.navY = oY;
+
+        this.navEnable = true;
+    }
+
+    /**
+     * Режим масштабирования и навигации.
+     * Окончание прикосновения.
+     */
+     handlePanTouchEnd(event){
+        this.navEnable = false;
+    }
+
+    /**
+     * Режим масштабирования и навигации.
+     * Передвижение.
+     */
+     handlePanTouchMove(event){
+        event.preventDefault();
+        let touch = event.targetTouches[0];
+        if(this.navEnable){
+            let oX = touch.pageX;
+            let oY = touch.pageY;
+    
+            let dx = oX - this.navX;
+            let dy = oY - this.navY;
+
+            const { navLeft, navTop } = this.state;
+
+            if(typeof this.props.onChangeNav === "function"){
+                this.props.onChangeNav(navLeft+dx, navTop-dy);
+            }
+
+            // тормоза при перемещении
+            this.setState({navLeft: navLeft+dx, navTop: navTop-dy}, () => {
+                this.navX += dx;
+                this.navY += dy;
+            });
+        }        
+    }
+
+    /**
      * Показать не экране текущие координаты
      */
     setCurrentPointer(devX, devY){
@@ -587,13 +639,14 @@ class CncRouterPointer extends React.Component{
                     onMouseUp    ={e => this.state.isPanMode ? this.handlePanMouseUp(e) : this.handleSelectMouseUp(e)} 
                     onMouseDown  ={e => this.state.isPanMode ? this.handlePanMouseDown(e) : null} 
                     
-                    // onTouchMove  ={e => this.state.isPanMode ? this.handlePanMouseMove(e) : this.handleSelectMouseMove(e)}
-                    // onTouchEnd   ={e => this.state.isPanMode ? this.handlePanMouseUp(e) : this.handleSelectMouseUp(e)} 
-                    // onTouchStart ={e => this.state.isPanMode ? this.handlePanMouseDown(e) : null} 
+                    onTouchMove  ={e => this.state.isPanMode ? this.handlePanTouchMove(e) : null}
+                    onTouchEnd   ={e => this.state.isPanMode ? this.handlePanTouchEnd(e) : null} 
+                    onTouchStart ={e => this.state.isPanMode ? this.handlePanTouchStart(e) : null} 
                     
                     style={{
                         position: 'absolute', top: 30, left: 50, width: this.state.width, height: this.state.height, 
                         backgroundColor: 'white', opacity: 0.0, 
+                        touchAction: 'none',
                 }}>
                 </div>
 
