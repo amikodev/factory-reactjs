@@ -331,10 +331,12 @@ var GCode = (function(){
     const command_M = (value, frame) => {
         let processThisCommand = true;
         switch(value){
+            case 1:     // M01 - включить плазму (постпроцессор asketcnc_plasma)
             case 3:     // M03 - включить плазму
             case 7:     // M07 - включить плазму
 
                 break;
+            case 2:     // M02 - выключить плазму (постпроцессор asketcnc_plasma)
             case 5:     // M05 - выключить плазму
             case 8:     // M08 - включить плазму
 
