@@ -50,6 +50,7 @@ import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
 import HighlightOffIcon from '@material-ui/icons/HighlightOff';
 
 import {AppContext} from '../AppContext';
+import DialogModal from '../DialogModal';
 
 import CncRouterPointer from './CncRouterPointer';
 import CncRouterGcode from './CncRouterGcode';
@@ -114,10 +115,13 @@ const OBJ_NAME_COORD_TARGET = 0x54;
 const OBJ_NAME_PLASMA_ARC = 0x55;
 const OBJ_NAME_COORD_SYSTEM = 0x56;
 
-// const CMD_READ = 0x01;
-// const CMD_WRITE = 0x02;
+const CMD_READ = 0x01;
+const CMD_WRITE = 0x02;
 const CMD_RUN = 0x03;
 const CMD_STOP = 0x04;
+const CMD_NOTIFY = 0x05;
+const CMD_APP1 = 0x06;
+const CMD_APP2 = 0x07;
 
 const PREPARE_SIZE = 0x01;
 const PREPARE_RUN = 0x02;
@@ -177,6 +181,7 @@ class CncRouter extends React.Component{
             currentPoint: null,
             userZeroPoint: {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0},
 
+            showCamera: false,
         };
 
         this.refCncRouterPointer = React.createRef();
@@ -690,6 +695,8 @@ class CncRouter extends React.Component{
         ws.send(wsPrepareData( [OBJ_NAME_CNC_ROUTER] ));
 
         ws.send(wsPrepareData( [OBJ_NAME_COORD_SYSTEM, COORD_SYSTEM_USER] ));
+
+        ws.send(wsPrepareData( [OBJ_NAME_PLASMA_ARC, PLASMA_ARC_VOLTAGE, CMD_READ] ));
     }
 
     wsStateChange(wsEventType){
@@ -934,6 +941,26 @@ class CncRouter extends React.Component{
                     </Alert>
                 </Snackbar>
 
+                <div>
+                    {/* <Paper elevation={3}> */}
+                        <Button variant="contained" onClick={e => this.setState({showCamera: true})}>{('Камера')}</Button>
+                    {/* </Paper> */}
+                </div>
+                {this.state.showCamera &&
+                    <DialogModal caption={'Camera'} component={
+                        <div style={{position: 'relative'}}>
+                            <img src="http://192.168.1.85:8081/" style={{
+                                border: "16px #DDD solid"
+                            }} width={640} height={480} />
+                            <img src="cameraCenter.png" style={{
+                                position: 'absolute',
+                                left: (640-100)/2,
+                                top: (480-100)/2,
+                            }} />
+                        </div>
+                    } onClose={() => { this.setState({showCamera: false}); }} />
+                }
+
             </div>
         );
     }
@@ -956,8 +983,13 @@ export {
     OBJ_NAME_PLASMA_ARC,
     OBJ_NAME_COORD_SYSTEM,
 
+    CMD_READ,
+    CMD_WRITE,
     CMD_RUN,
     CMD_STOP,
+    CMD_NOTIFY,
+    CMD_APP1,
+    CMD_APP2,
 
     PLASMA_ARC_START,
     PLASMA_ARC_STARTED,

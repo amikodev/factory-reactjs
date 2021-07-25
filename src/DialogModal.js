@@ -94,7 +94,7 @@ export default function DialogModal(props) {
             {/* <Button variant="outlined" color="primary" onClick={handleClickOpen}>
                 Open dialog
             </Button> */}
-            <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={true}>
+            <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={true} maxWidth={false}>
                 <DialogTitle id="customized-dialog-title" onClose={handleClose}>
                     {props.caption}
                 </DialogTitle>
@@ -102,9 +102,11 @@ export default function DialogModal(props) {
                     {props.component}
                 </DialogContent>
                 <DialogActions>
-                    <Button autoFocus onClick={handleSave} color="primary">
-                        {props.saveCaption}
-                    </Button>
+                    {props.saveCaption &&
+                        <Button autoFocus onClick={handleSave} color="primary">
+                            {props.saveCaption}
+                        </Button>
+                    }
                 </DialogActions>
             </Dialog>
         </div>
