@@ -28,8 +28,6 @@ import {AppContext} from '../../AppContext';
 import * as THREE from 'three';
 import TrackballControls from 'three-trackballcontrols';
 import { CSG } from 'three-csg-ts';
-// import { SimplifyModifier } from 'three/examples/jsm/modifiers/SimplifyModifier.js';
-import { SimplifyModifier } from '../../jsm/modifiers/SimplifyModifier.js';
 
 import { withStyles } from '@material-ui/core/styles';
 import Equipments from '../../Equipments';
@@ -70,11 +68,8 @@ const useStyles = theme => ({
         this.cylinderGeometry = null;
         this.mill = null;
         this.blankMesh = null;
-        // this.simpleMesh = null;
 
-
-        // this.controls = null;
-
+        
     }
 
     componentDidMount(){
@@ -263,8 +258,6 @@ const useStyles = theme => ({
             obj.scale.x = scale.x;
             obj.scale.y = scale.y;
             obj.scale.z = scale.z;
-
-            // return {position, scale};
         }
         this.translateCoord = translateCoord;
 
@@ -278,16 +271,6 @@ const useStyles = theme => ({
             scene.add(mesh);
             this.blankMesh = mesh;
         }
-
-        // let cutBlank = () => {
-
-        //     let material4 = new THREE.MeshStandardMaterial({color: 0xff0000});
-        //     let millCut = new THREE.Mesh(cylinderGeometry, material4);
-        //     translateCoord(millCut, {x: 1.75-equipmentWidth/2 +co.x, y: 2.5-equipmentWidth/2 +co.y, z: -this.equipmentLength}, {x: equipmentWidth, y: equipmentWidth, z: this.equipmentLength});
-        //     scene.add(millCut);
-
-
-        // }
 
         let parseReady = () => {
             let posInfo = renderer.domElement.getBoundingClientRect();
@@ -335,79 +318,10 @@ const useStyles = theme => ({
 
         let subRes = CSG.subtract(this.blankMesh, millCut);
         // subRes.updateMatrix();
-        // console.log(subRes.geometry.attributes.position.count);
 
-
-        // let modifier = new THREE.SimplifyModifier();
-        let modifier = new SimplifyModifier();
-        
-        // const simplified = subRes.clone();
-        // simplified.material = simplified.material.clone();
-        // simplified.material.flatShading = true;
-        // simplified.dynamic = true;
-        // // const count = Math.floor( simplified.geometry.attributes.position.count * 0.875 ); // number of vertices to remove
-        // const count = Math.floor( simplified.geometry.attributes.position.count * 0.1 ); // number of vertices to remove
-        // // console.log({count});
-        // simplified.geometry = modifier.modify( simplified.geometry, count );
-
-        // let count = subRes.geometry.attributes.position.count * 0.9 | 0;
-        const count = Math.floor( subRes.geometry.attributes.position.count * 0.875 ); // number of vertices to remove
-        // console.log({count, a: subRes.geometry.vertices});
-        let tolerance = 100.0;
-        let simplified = modifier.modify(subRes.geometry, count);
-        // let simplified = modifier.modify(this.blankMesh.geometry, tolerance);
-        // simplified.dynamic = true;
-
-        // let mesh = THREE.SceneUtils.createMultiMaterialObject(
-        //     simplified, [
-        //         material4
-        //     ]
-        // );
-        // let mesh = new THREE.Mesh(simplified, material4);
-        // let mesh = new THREE.Mesh(this.blankMesh.geometry, material4);
-        // console.log(mesh.geometry.attributes.position.count);
-        // console.log(this.blankMesh.geometry);
-
-        // let mesh = new THREE.Mesh(subRes.clone().geometry, material4);
-        let mesh = new THREE.Mesh(simplified, material4);
-        this.translateCoord(mesh, {x: -12.5, y: -4, z: -2-this.equipmentLength+0.5}, {x: 8, y: 8, z: 2});
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        material4.wireframe = true;
-        mesh.material = material4;
-
-        // if(this. !== null){
-        //     scene.remove(this.simpleMesh);
-        // }
-
-        // this.simsimpleMeshpleMesh = mesh;
-
-        // console.log({mesh, simplified});
-
-    // console.log(subRes.clone());
-        scene.add(mesh);
-
-        // simplified.position.x = 3;
-        // simplified.rotation.y = - Math.PI / 2;
-        // scene.add( simplified );
-
-        // var modifier = new THREE.SimplifyModifier();
-        // var simplified = modifier.modify(MeshGeometry, MeshGeometry.vertices.length * 0.85 | 0);
-        simplified.computeFaceNormals();
-        simplified.computeVertexNormals();
-
-		// material1 = child.material.clone();
-		// mesh = new THREE.Mesh(simplified, material1);
-		// scene.add(mesh);
-
-        
-        // scene.remove(this.blankMesh);
+        scene.remove(this.blankMesh);
         this.blankMesh = subRes;
-        // this.blankMesh = simplified;
-        // this.blankMesh = mesh;
-        // scene.add(this.blankMesh);
-        // scene.add(simplified);
-        // scene.add(mesh);
+        scene.add(this.blankMesh);
 
     }
 
@@ -479,7 +393,6 @@ const useStyles = theme => ({
             this.rotaryC.rotation.y = this.props.C *Math.PI/180;
 
             // this.cutBlank();
-            // console.log('update');
         }
 
         return (
@@ -497,6 +410,7 @@ Simulation.defaultProps = {
     Y: 0,
     Z: 0,
     A: 0,
+    B: 0,
     C: 0
 };
 

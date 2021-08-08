@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 import React from 'react';
+import { connect } from 'react-redux';
 
 import './App.css';
 import 'fontsource-roboto';
@@ -38,6 +39,9 @@ import Macros from './Macros';
 import CncRouter from './equipment/cncRouter/CncRouter';
 import FreqConverter from './equipment/freqConv/FreqConverter';
 import Cnc5AxisRouter from './equipment/cnc5AxisRouter/Cnc5AxisRouter';
+
+// reducers
+import { reducerMaps as Cnc5AxisRouter_reducerMaps } from './equipment/cnc5AxisRouter/Cnc5AxisRouter';
 
 
 import CncRouterSettings from './settings/CncRouterSettings';
@@ -79,12 +83,12 @@ class App extends React.Component{
         this.equipmentRefs = {};
 
 
-        console.log('equipmentName', props.equipmentName);
-        if(props.equipmentName === null){
-            window.Equipments.initItems();
-        } else{
-            window.Equipments.initItem(props.equipmentName);
-        }
+        // console.log('equipmentName', props.equipmentName);
+        // if(props.equipmentName === null){
+        //     window.Equipments.initItems();
+        // } else{
+        //     window.Equipments.initItem(props.equipmentName);
+        // }
 
     }
 
@@ -110,7 +114,9 @@ class App extends React.Component{
                 component = <FreqConverter item={item} ref={ref} />;
                 break;
             case Equipments.TYPE_CNC_5_AXIS_ROUTER:
-                component = <Cnc5AxisRouter item={item} ref={ref} />;
+                const maps = Cnc5AxisRouter_reducerMaps(item);
+                const ComponentClass = connect(maps.mapStateToProps, maps.mapDispatchToProps)(Cnc5AxisRouter);
+                component = <ComponentClass item={item} ref={ref} />;
                 break;
             default:
                 break;
@@ -151,7 +157,9 @@ class App extends React.Component{
                 component = <FreqConverter item={item} ref={ref} />;
                 break;
             case Equipments.TYPE_CNC_5_AXIS_ROUTER:
-                component = <Cnc5AxisRouter item={item} ref={ref} />;
+                const maps = Cnc5AxisRouter_reducerMaps(item);
+                const ComponentClass = connect(maps.mapStateToProps, maps.mapDispatchToProps)(Cnc5AxisRouter);
+                component = <ComponentClass item={item} ref={ref} />;
                 break;
             default:
                 break;

@@ -64,26 +64,14 @@ class Cnc5AxisRouter extends React.Component{
 
 
         this.state = {
-            posX: 0,
-            posY: 0,
-            posZ: 0,
-            angleA: 0,
-            angleC: 0
+
         }
 
     }
 
     handleCoordAxeChange(event, axeName, value){
-        this.setState({[axeName]: value});
+        this.props.onCoord(axeName, value);
     }
-
-    // handleAngleAChange(event, value){
-    //     this.setState({angleA: value});
-    // }
-
-    // handleAngleCChange(event, value){
-    //     this.setState({angleC: value});
-    // }
 
     componentDidMount(){
 
@@ -100,6 +88,14 @@ class Cnc5AxisRouter extends React.Component{
 
         let inputGcodeID = "cncRouter_"+item.name+"_gcode";
 
+        const axeSettings = {
+            X: {min: -4, max: 4, step: 0.1},
+            Y: {min: -4, max: 4, step: 0.1},
+            Z: {min: -4, max: 4, step: 0.1},
+            A: {min: -135, max: 135, step: 1},
+            C: {min: -180, max: 180, step: 1},
+        };
+
         return (
             <div className={classes.root}>
 
@@ -111,50 +107,30 @@ class Cnc5AxisRouter extends React.Component{
 
                 <Grid container spacing={3}>
                     <Grid item xs={12} sm={6} md={5} lg={4}>
-                        <Simulation 
-                            A={this.state.angleA}
-                            C={this.state.angleC}
-                            X={this.state.posX}
-                            Y={this.state.posY}
-                            Z={this.state.posZ}
+                        <Simulation
+                            X={this.props.coordX}
+                            Y={this.props.coordY}
+                            Z={this.props.coordZ}
+                            A={this.props.coordA}
+                            B={this.props.coordC}
+                            C={this.props.coordC}
                         />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
 
-                        X
-                        <Slider 
-                            defaultValue={0} aria-labelledby="discrete-slider-always" valueLabelDisplay="on"
-                            value={this.state.posX} min={-4} max={4} step={0.1}
-                            onChange={(e, v) => this.handleCoordAxeChange(e, 'posX', v)}
-                        /> <br/>
-
-                        Y
-                        <Slider 
-                            defaultValue={0} aria-labelledby="discrete-slider-always" valueLabelDisplay="on"
-                            value={this.state.posY} min={-4} max={4} step={0.1}
-                            onChange={(e, v) => this.handleCoordAxeChange(e, 'posY', v)}
-                        /> <br/>
-
-                        Z
-                        <Slider 
-                            defaultValue={0} aria-labelledby="discrete-slider-always" valueLabelDisplay="on"
-                            value={this.state.posZ} min={-4} max={4} step={0.1}
-                            onChange={(e, v) => this.handleCoordAxeChange(e, 'posZ', v)}
-                        /> <br/>
-
-                        A
-                        <Slider 
-                            defaultValue={0} aria-labelledby="discrete-slider-always" valueLabelDisplay="on"
-                            value={this.state.angleA} min={-135} max={135}
-                            onChange={(e, v) => this.handleCoordAxeChange(e, 'angleA', v)}
-                        /> <br/>
-
-                        C
-                        <Slider 
-                            defaultValue={0} aria-labelledby="discrete-slider-always" valueLabelDisplay="on"
-                            value={this.state.angleC} min={-180} max={180}
-                            onChange={(e, v) => this.handleCoordAxeChange(e, 'angleC', v)}
-                        /> <br/>
+                        {Object.keys(axeSettings).map(axeName => {
+                            let axe = axeSettings[axeName];
+                            return (
+                                <React.Fragment key={axeName}>
+                                    {axeName}
+                                    <Slider 
+                                        aria-labelledby="discrete-slider-always" valueLabelDisplay="on"
+                                        value={this.props['coord'+axeName]} min={axe.min} max={axe.max} step={axe.step}
+                                        onChange={(e, v) => this.handleCoordAxeChange(e, axeName, v)}
+                                    /> <br/>
+                                </React.Fragment>
+                            );
+                        })}
 
                         <br/>
                         <br/>
@@ -163,7 +139,8 @@ class Cnc5AxisRouter extends React.Component{
                         <button style={{
                             fontSize: 20, width: 120
                         }} onClick={e => {
-                            this.setState({angleA: 0, angleC: 0, posX: 0, posY: 0, posZ: 0});
+                            const { onCoords } = this.props;
+                            onCoords({X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0});
                         }}>Reset</button>
 
 
@@ -185,25 +162,36 @@ Cnc5AxisRouter.defaultProps = {
     item: {},                   // свойства оборудования
 };
 
-const mapStateToProps = (state) => {
-    return {
 
+const reducerMaps = (item) => {
+
+    const mapStateToProps = (state) => {
+        let st = state[item.name];
+        // console.log({name: item.name, state, st});
+        return {
+            coordX: st.coordX,
+            coordY: st.coordY,
+            coordZ: st.coordZ,
+            coordA: st.coordA,
+            coordB: st.coordB,
+            coordC: st.coordC,
+        };
     };
+    
+    const mapDispatchToProps = (dispatch) => {
+        return {
+            onCoord: (name, value) => { dispatch({type: 'COORD_'+name, payload: value}) },
+            onCoords: (coords) => { Object.keys(coords).map(name => { dispatch({type: 'COORD_'+name, payload: coords[name]}); }) },
+        };
+    };
+    
+    return {mapStateToProps, mapDispatchToProps};
 };
 
-const mapDispatchToProps = (dispatch) => {
-    return {
 
-    };
-};
-
-// export default CncRouter;
-// export default connect(mapStateToProps, mapDispatchToProps)(withStyles(useStyles)(Cnc5AxisRouter));
-// console.log( connect(mapStateToProps, mapDispatchToProps) );
-// export default connect(mapStateToProps, mapDispatchToProps)(Cnc5AxisRouter);
 export default withStyles(useStyles)(Cnc5AxisRouter);
 
 export {
-
+    reducerMaps,
 
 };
