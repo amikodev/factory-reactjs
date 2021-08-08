@@ -58,6 +58,7 @@ class Equipments extends React.Component {
     static TYPE_OIL_STATION = 'Oil Station';
     static TYPE_FREQ_CONVERTER = 'Freq Converter';
     static TYPE_RMT_1 = 'RMT-1';
+    static TYPE_CNC_5_AXIS_ROUTER = 'CNC 5 axis Router';
 
     static STATE_NONE = 0;
     static STATE_CONNECTED = 1;
@@ -256,8 +257,8 @@ window.Equipments = (() => {
             type: Equipments.TYPE_CNC_ROUTER, 
             caption: 'Plasma', 
             name: 'cncPlasma', 
-            // url: '192.168.1.65', 
-            url: '192.168.1.113', 
+            url: '192.168.1.65', 
+            // url: '192.168.1.113', 
             stateConnect: Equipments.STATE_NONE, 
             params: {x: 1250, y: 2500, z: 120}
         },
@@ -284,6 +285,14 @@ window.Equipments = (() => {
         // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
         {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 1', name: 'rmt1_1', url: '192.168.4.4', stateConnect: Equipments.STATE_NONE, params: {}},
         {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 2', name: 'rmt1_2', url: '192.168.4.5', stateConnect: Equipments.STATE_NONE, params: {}},
+        {
+            type: Equipments.TYPE_CNC_5_AXIS_ROUTER,
+            caption: '5 Axis',
+            name: 'cnc5axis',
+            url: '192.168.1.65',
+            stateConnect: Equipments.STATE_NONE,
+            params: {},
+        },
     ];
     // console.log(window.location, window.location.hostname);
     // items = [

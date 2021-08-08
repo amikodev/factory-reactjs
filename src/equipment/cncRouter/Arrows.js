@@ -31,7 +31,7 @@ import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 
-import {AppContext} from '../AppContext';
+import {AppContext} from '../../AppContext';
 
 import { withStyles } from '@material-ui/core/styles';
 const useStyles = theme => ({
@@ -70,7 +70,7 @@ const ARR_ZM = 'zm';
 const ARR_AP = 'ap';
 const ARR_AM = 'am';
 
-class CncRouterArrows extends React.Component{
+class Arrows extends React.Component{
 
     static contextType = AppContext;
 
@@ -281,9 +281,9 @@ class CncRouterArrows extends React.Component{
 
 }
 
-CncRouterArrows.defaultProps = {
+Arrows.defaultProps = {
     onArrowDown: null,
     onArrowUp: null,
 };
 
-export default withStyles(useStyles)(CncRouterArrows);
+export default withStyles(useStyles)(Arrows);

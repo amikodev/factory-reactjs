@@ -49,21 +49,21 @@ import EditIcon from '@material-ui/icons/Edit';
 import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
 import HighlightOffIcon from '@material-ui/icons/HighlightOff';
 
-import {AppContext} from '../AppContext';
-import DialogModal from '../DialogModal';
+import {AppContext} from '../../AppContext';
+import DialogModal from '../../DialogModal';
 
-import CncRouterPointer from './CncRouterPointer';
-import CncRouterGcode from './CncRouterGcode';
-import CncRouterArrows from './CncRouterArrows';
-import CncRouterPlasmaArc from './CncRouterPlasmaArc';
+import Pointer from './Pointer';
+import GcodeList from './GcodeList';
+import Arrows from './Arrows';
+import PlasmaArc from './PlasmaArc';
 
-import GCode from '../GCode';
-import { letterCodes } from '../GCode';
-import { COORD_SYSTEM_NULL, COORD_SYSTEM_USER } from '../GCode';
+import GCode from '../../GCode';
+import { letterCodes } from '../../GCode';
+import { COORD_SYSTEM_NULL, COORD_SYSTEM_USER } from '../../GCode';
 
 
 import { withStyles } from '@material-ui/core/styles';
-import Equipments from '../Equipments';
+import Equipments from '../../Equipments';
 const useStyles = theme => ({
     root: {
         '& .MuiTextField-root': {
@@ -593,6 +593,7 @@ class CncRouter extends React.Component{
     }
 
     gcodeDrawAll(){
+        // this.refCncRouterPointer.current.drawAll();
         GCode.drawGrid();
         GCode.drawCoordSystem(COORD_SYSTEM_NULL);
         GCode.drawCoordSystem(COORD_SYSTEM_USER);
@@ -738,7 +739,7 @@ class CncRouter extends React.Component{
 
                 <Grid container spacing={3}>
                     <Grid item xs={12} sm={6} md={5} lg={3}>
-                        <CncRouterPointer 
+                        <Pointer 
                             ref={this.refCncRouterPointer}
                             item={item} 
                             onSelectPointer={(point) => this.handleSelectPointer(point)} 
@@ -798,7 +799,7 @@ class CncRouter extends React.Component{
                                 {('Аппарат плазменной резки')}
                             </Typography>
 
-                            <CncRouterPlasmaArc
+                            <PlasmaArc
                                 onStartClick={doStart => this.handlePlasmaArcDoStart(doStart)}
                                 item={item} 
                                 started={this.state.plasmaStarted}
@@ -812,7 +813,7 @@ class CncRouter extends React.Component{
                                 GCode
                             </Typography>
 
-                            <CncRouterGcode 
+                            <GcodeList 
                                 gcodeLines={this.state.gcodeLines} 
                                 currentGcodeLine={this.state.currentGcodeLine} 
                                 gcodeTimestamp={this.state.gcodeTimestamp}
@@ -918,7 +919,7 @@ class CncRouter extends React.Component{
 
                     <Grid item xs={12} sm={8} md={5} lg={4} xl={3}>
                         <Paper elevation={3}>
-                            <CncRouterArrows 
+                            <Arrows 
                                 onArrowDown={(num, dir, speed, runAfterLimit) => this.handleArrowDown(num, dir, speed, runAfterLimit)} 
                                 onArrowUp={(num) => this.handleArrowUp(num)} 
                             />

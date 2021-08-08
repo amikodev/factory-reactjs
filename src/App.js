@@ -35,8 +35,9 @@ import Equipments from './Equipments';
 import About from './About';
 import Macros from './Macros';
 
-import CncRouter from './equipment/CncRouter';
+import CncRouter from './equipment/cncRouter/CncRouter';
 import FreqConverter from './equipment/freqConv/FreqConverter';
+import Cnc5AxisRouter from './equipment/cnc5AxisRouter/Cnc5AxisRouter';
 
 
 import CncRouterSettings from './settings/CncRouterSettings';
@@ -108,6 +109,9 @@ class App extends React.Component{
             case Equipments.TYPE_FREQ_CONVERTER:
                 component = <FreqConverter item={item} ref={ref} />;
                 break;
+            case Equipments.TYPE_CNC_5_AXIS_ROUTER:
+                component = <Cnc5AxisRouter item={item} ref={ref} />;
+                break;
             default:
                 break;
         }
@@ -122,6 +126,9 @@ class App extends React.Component{
                 this.mainMenuRef.current.changeTab(TAB_EQUIPMENT);
 
             document.title = item.caption;
+
+            console.log(ref.current);
+
         });
     }
 
@@ -142,6 +149,9 @@ class App extends React.Component{
                 break;
             case Equipments.TYPE_FREQ_CONVERTER:
                 component = <FreqConverter item={item} ref={ref} />;
+                break;
+            case Equipments.TYPE_CNC_5_AXIS_ROUTER:
+                component = <Cnc5AxisRouter item={item} ref={ref} />;
                 break;
             default:
                 break;

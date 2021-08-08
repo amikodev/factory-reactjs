@@ -29,11 +29,11 @@ import ZoomOutIcon from '@material-ui/icons/ZoomOut';
 import AllOutIcon from '@material-ui/icons/AllOut';
 import DragIndicatorIcon from '@material-ui/icons/DragIndicator';
 
-import {AppContext} from '../AppContext';
+import {AppContext} from '../../AppContext';
 
 import { OBJ_NAME_COORDS, OBJ_NAME_COORD_SYSTEM } from './CncRouter';
 
-class CncRouterPointer extends React.Component{
+class Pointer extends React.Component{
 
     static contextType = AppContext;
 
@@ -48,6 +48,7 @@ class CncRouterPointer extends React.Component{
         this.getCanvasRef = this.getCanvasRef.bind(this);
         this.calcCanvasZoom = this.calcCanvasZoom.bind(this);
         this.setZoom = this.setZoom.bind(this);
+        this.drawAll = this.drawAll.bind(this);
 
         this.state = {
 
@@ -97,11 +98,11 @@ class CncRouterPointer extends React.Component{
         if(canvas.getContext){
             this._ctx = canvas.getContext('2d');
 
-            const calcSize = () => {
+            const parseReady = () => {
                 let posInfo = canvas.parentNode.getBoundingClientRect();
 
                 if(posInfo.width === 0 && posInfo.height === 0){
-                    window.setTimeout(calcSize, 100);
+                    window.setTimeout(parseReady, 100);
                     return;
                 }
 
@@ -148,7 +149,7 @@ class CncRouterPointer extends React.Component{
                 });
             }
 
-            window.setTimeout(calcSize, 100);
+            window.setTimeout(parseReady, 100);
         }
     }
 
@@ -492,6 +493,73 @@ class CncRouterPointer extends React.Component{
     }
 
     /**
+     * Рисование сетки, координат и изображения
+     */
+    drawAll(){
+        this.drawGrid();
+
+    }
+
+    drawGrid(){
+
+        let _ctx = this._ctx;
+        let { navLeft, navTop, zoom } = this.state;
+        let _canvas = this.refCanvas.current;
+        // let _navLeft = this.state.navLeft;
+        // let _navTop = this.state.navTop;
+        // let _zoom = this.state.zoom;
+
+        // console.log({ _navLeft, _navTop, _zoom, _ctx });
+
+        if(_ctx === null)
+            return;
+
+        // очистка Canvas
+        _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
+
+        _ctx.lineWidth = 1;
+
+        let minorStyle = {dash: [10, 4], color: "#CCC"};
+        let majorStyle = {dash: [10, 0], color: "#777"};
+
+        let minorWidth = 100;
+        let majorWidth = minorWidth*4;
+        let cx = _canvas.width/zoom / minorWidth;
+        let left = (navLeft/zoom)%minorWidth;
+        let cy = _canvas.height/zoom / minorWidth;
+        let top = (navTop/zoom)%minorWidth;
+        
+        for(let i=0; i<=cx; i++){
+            // console.log([left, left%majorWidth]);
+            // let lineStyle = left%majorWidth === 0 ? majorStyle : minorStyle;
+            let lineStyle = minorStyle;
+            _ctx.beginPath();
+            _ctx.moveTo(left*zoom, 0);
+            _ctx.lineTo(left*zoom, _canvas.height);
+            _ctx.setLineDash(lineStyle.dash);
+            _ctx.strokeStyle = lineStyle.color;
+            _ctx.stroke();
+
+            left += minorWidth;
+        }
+
+        for(let i=0; i<=cy; i++){
+            // console.log([left, left%majorWidth]);
+            // let lineStyle = left%majorWidth === 0 ? majorStyle : minorStyle;
+            let lineStyle = minorStyle;
+            _ctx.beginPath();
+            _ctx.moveTo(0, top*zoom);
+            _ctx.lineTo(_canvas.width, top*zoom);
+            _ctx.setLineDash(lineStyle.dash);
+            _ctx.strokeStyle = lineStyle.color;
+            _ctx.stroke();
+
+            top += minorWidth;
+        }
+
+    }
+
+    /**
      * Увеличение масштаба
      */
     handleZoomInClick(event){
@@ -695,7 +763,7 @@ class CncRouterPointer extends React.Component{
     }
 }
 
-CncRouterPointer.defaultProps = {
+Pointer.defaultProps = {
     item: {},                   // свойства оборудования
     selectedPointer: null,      // выбранная точка
     onReady: null,              // функция вызываемая после готовнсти объекта
@@ -703,4 +771,4 @@ CncRouterPointer.defaultProps = {
     onChangeNav: null,          // функция вызываемая при навигации
 };
 
-export default CncRouterPointer;
+export default Pointer;

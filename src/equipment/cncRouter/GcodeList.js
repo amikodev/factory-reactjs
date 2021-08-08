@@ -23,7 +23,7 @@ import ListItemText from '@material-ui/core/ListItemText';
 import { FixedSizeList } from 'react-window';
 
 
-import {AppContext} from '../AppContext';
+import {AppContext} from '../../AppContext';
 
 import { OBJ_NAME_CNC_GCODE } from './CncRouter';
 
@@ -50,7 +50,7 @@ const useStyles = theme => ({
 });
 
 
-class CncRouterGcode extends React.Component{
+class GcodeList extends React.Component{
 
     static contextType = AppContext;
 
@@ -150,11 +150,11 @@ class CncRouterGcode extends React.Component{
 //     );
 // }
 
-CncRouterGcode.defaultProps = {
+GcodeList.defaultProps = {
     gcodeLines: [],
     currentGcodeLine: 0,
     gcodeTimestamp: 0,
 };
 
-export default withStyles(useStyles)(CncRouterGcode);
+export default withStyles(useStyles)(GcodeList);
 

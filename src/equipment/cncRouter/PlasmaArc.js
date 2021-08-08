@@ -27,8 +27,8 @@ import Grid from '@material-ui/core/Grid';
 import Brightness1Icon from '@material-ui/icons/Brightness1';
 import SettingsIcon from '@material-ui/icons/Settings';
 
-import {AppContext} from '../AppContext';
-import DialogModal from '../DialogModal';
+import {AppContext} from '../../AppContext';
+import DialogModal from '../../DialogModal';
 
 import { OBJ_NAME_PLASMA_ARC } from './CncRouter';
 import { CMD_READ, CMD_WRITE, CMD_NOTIFY, CMD_APP1, CMD_RUN, CMD_STOP } from './CncRouter';
@@ -72,7 +72,7 @@ const useStyles = theme => ({
 });
 
 
-class CncRouterPlasmaArc extends React.Component{
+class PlasmaArc extends React.Component{
 
     static contextType = AppContext;
 
@@ -372,9 +372,9 @@ class CncRouterPlasmaArc extends React.Component{
     }
 }
 
-CncRouterPlasmaArc.defaultProps = {
+PlasmaArc.defaultProps = {
     onStartClick: null,         // функция вызываемая при нажатии на кнопку "Запустить"/"Остановить"
     started: false,
 };
 
-export default withStyles(useStyles)(CncRouterPlasmaArc);
+export default withStyles(useStyles)(PlasmaArc);
