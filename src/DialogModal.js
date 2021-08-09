@@ -88,13 +88,14 @@ export default function DialogModal(props) {
 
 
     // prevProps = Object.assign({}, props);
+    let fullWidth = props.fullWidth ?? false;
 
     return (
         <div>
             {/* <Button variant="outlined" color="primary" onClick={handleClickOpen}>
                 Open dialog
             </Button> */}
-            <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={true} maxWidth={false}>
+            <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={true} maxWidth={false} fullWidth={fullWidth}>
                 <DialogTitle id="customized-dialog-title" onClose={handleClose}>
                     {props.caption}
                 </DialogTitle>
