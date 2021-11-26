@@ -63,7 +63,7 @@ function FileSystem(){
                     entries.push(ch.repeat(level)+`${name}; size=${file.size}`);
                 } else if(handle.kind === 'directory'){
                     let childs = await scan(handle, level+1);
-                    entries.push(ch.repeat(level)+`[${name}]` + ` (${childs.length})`);
+                    entries.push(ch.repeat(level)+'['+name+'] ('+childs.length+')');
                     if(childs.length > 0){
                         entries.push(...childs);
                     } else{
@@ -104,7 +104,7 @@ function FileSystem(){
                     }
                 } else if(handle.kind === 'directory'){
                     if(name === needName){
-                        if(level == needTree.length-1){
+                        if(level === needTree.length-1){
                             entry = handle;
                         } else{
                             entry = await scan(handle, level+1);

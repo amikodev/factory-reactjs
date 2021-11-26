@@ -17,7 +17,7 @@ import reducerDefault from './reducerDefault';
 const reducerInit = (equipmentItems) => {
     // console.log({equipmentItems});
     let list = {};
-    equipmentItems.map((item) => {
+    equipmentItems.forEach((item) => {
         let name = item.name;
         let reducer = reducerDefault;
         switch(item.type){

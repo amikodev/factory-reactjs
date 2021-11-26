@@ -23,10 +23,8 @@ import './App.css';
 import 'fontsource-roboto';
 
 import AppsIcon from '@material-ui/icons/Apps';
-import BuildIcon from '@material-ui/icons/Build';
 import MemoryIcon from '@material-ui/icons/Memory';
 import InfoIcon from '@material-ui/icons/Info';
-import ChangeHistoryIcon from '@material-ui/icons/ChangeHistory';
 
 
 import {AppContext} from './AppContext';
@@ -34,7 +32,7 @@ import {AppContext} from './AppContext';
 import MainMenu from './MainMenu';
 import Equipments from './Equipments';
 import About from './About';
-import Macros from './Macros';
+// import Macros from './Macros';
 
 import CncRouter from './equipment/cncRouter/CncRouter';
 import FreqConverter from './equipment/freqConv/FreqConverter';
@@ -45,9 +43,6 @@ import { reducerMaps as Cnc5AxisRouter_reducerMaps } from './equipment/cnc5AxisR
 
 
 import CncRouterSettings from './settings/CncRouterSettings';
-
-import TestCrossOffset from './TestCrossOffset';
-
 
 // const TAB_EQUIPMENTS = 0;
 const TAB_EQUIPMENT = 1;
@@ -81,14 +76,6 @@ class App extends React.Component{
         this.listenersWsRecieve = {};
 
         this.equipmentRefs = {};
-
-
-        // console.log('equipmentName', props.equipmentName);
-        // if(props.equipmentName === null){
-        //     window.Equipments.initItems();
-        // } else{
-        //     window.Equipments.initItem(props.equipmentName);
-        // }
 
     }
 
@@ -183,7 +170,7 @@ class App extends React.Component{
 
     handleEquipmentWsRecieve(item, data){
         if(typeof this.listenersWsRecieve[item.name] !== "undefined"){
-            this.listenersWsRecieve[item.name].map(func => {
+            this.listenersWsRecieve[item.name].forEach(func => {
                 if(typeof func === "function"){
                     func(data);
                 }
@@ -266,7 +253,7 @@ class App extends React.Component{
 
     getPointXYZ(data, offset){
         let point = {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0};
-        ['x', 'y', 'z'].map((letter, ind) => {
+        ['x', 'y', 'z'].forEach((letter, ind) => {
             let offs = offset + ind*4;
             let val = new Float32Array(data.slice(offs, offs+4), 0, 1)[0];
             val = parseFloat(val.toFixed(2));
@@ -277,7 +264,7 @@ class App extends React.Component{
 
     getPoint(data, offset){
         let point = {x: 0, y: 0, z: 0, a: 0, b: 0, c: 0};
-        ['x', 'y', 'z', 'a', 'b', 'c'].map((letter, ind) => {
+        ['x', 'y', 'z', 'a', 'b', 'c'].forEach((letter, ind) => {
             let offs = offset + ind*4;
             let val = new Float32Array(data.slice(offs, offs+4), 0, 1)[0];
             val = parseFloat(val.toFixed(2));
@@ -300,59 +287,52 @@ class App extends React.Component{
         let menuItems = [];
 
         if(window.Equipments.getItems().length > 1){
-            menuItems.push(
-                {
-                    caption: 'Оборудование', 
-                    icon: <AppsIcon />, 
-                    component: 
-                        <Equipments 
-                            onSelect={(item) => this.handleEquipmentSelect(item)}
-                            onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
-                            onWsStateChange={(item, wsEventType) => this.handleEquipmentWsStateChange(item, wsEventType)}
-                        />
-                }
-            );
+            menuItems.push({
+                caption: 'Оборудование', 
+                icon: <AppsIcon />, 
+                component: 
+                    <Equipments 
+                        onSelect={(item) => this.handleEquipmentSelect(item)}
+                        onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
+                        onWsStateChange={(item, wsEventType) => this.handleEquipmentWsStateChange(item, wsEventType)}
+                    />
+            });
         } else{
-            menuItems.push(
-                {
-                    caption: '', 
-                    // icon: <AppsIcon />, 
-                    component: 
-                        <Equipments 
-                            onSelect={(item) => this.handleEquipmentSelect(item)}
-                            onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
-                            onWsStateChange={(item, wsEventType) => this.handleEquipmentWsStateChange(item, wsEventType)}
-                        />,
-                    disabled: true,
-                    style: {
-                        minWidth: 0,
-                        padding: 0,
-                    },
-                }
-            );
+            menuItems.push({
+                caption: '', 
+                // icon: <AppsIcon />, 
+                component: 
+                    <Equipments 
+                        onSelect={(item) => this.handleEquipmentSelect(item)}
+                        onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
+                        onWsStateChange={(item, wsEventType) => this.handleEquipmentWsStateChange(item, wsEventType)}
+                    />,
+                disabled: true,
+                style: {
+                    minWidth: 0,
+                    padding: 0,
+                },
+            });
         }
-        menuItems.push(
-            {
-                caption: this.state.currentEquipment === null ? 'Станок' : this.state.currentEquipment.caption, 
-                icon: <MemoryIcon />, 
-                // component: this.state.equipmentComponent, 
-                component: (
+        menuItems.push({
+            caption: this.state.currentEquipment === null ? 'Станок' : this.state.currentEquipment.caption, 
+            icon: <MemoryIcon />, 
+            component: (
 
-                    window.Equipments.getItems().map(item => {
-                        return (
-                            <div 
-                                key={item.name}
-                                hidden={this.state.currentEquipment !== null && this.state.currentEquipment.name !== item.name}
-                            >
-                                {this.getEquipmentComponent(item)}
-                            </div>
-                        );
-                    })
-            
-                ),
-                disabled: this.state.currentEquipment === null
-            }
-        );
+                window.Equipments.getItems().map(item => {
+                    return (
+                        <div 
+                            key={item.name}
+                            hidden={this.state.currentEquipment !== null && this.state.currentEquipment.name !== item.name}
+                        >
+                            {this.getEquipmentComponent(item)}
+                        </div>
+                    );
+                })
+        
+            ),
+            disabled: this.state.currentEquipment === null
+        });
         // menuItems.push(
         //     {
         //         caption: 'Настройки', 
@@ -382,56 +362,10 @@ class App extends React.Component{
                     currentEquipment: Object.assign({}, this.state.currentEquipment),
                 }}>
                     <MainMenu ref={this.mainMenuRef} items={menuItems} />
-                    {/* <MainMenu ref={this.mainMenuRef} items={[
-                        {
-                            caption: 'Оборудование', 
-                            icon: <AppsIcon />, 
-                            component: 
-                                <Equipments 
-                                    onSelect={(item) => this.handleEquipmentSelect(item)}
-                                    onWsRecieve={(item, data) => this.handleEquipmentWsRecieve(item, data)}
-                                />
-                        },
-                        {
-                            caption: this.state.currentEquipment === null ? 'Станок' : this.state.currentEquipment.caption, 
-                            icon: <MemoryIcon />, 
-                            // component: this.state.equipmentComponent, 
-                            component: (
-
-                                window.Equipments.getItems().map(item => {
-                                    // console.log(item.caption);
-                                    return (
-                                        <div 
-                                            key={item.name}
-                                            hidden={this.state.currentEquipment !== null && this.state.currentEquipment.name !== item.name}
-                                        >
-                                            {/* {item.caption} * /}
-                                            {this.getEquipmentComponent(item)}
-                                        </div>
-                                    );
-                                })
-                        
-                            ),
-                            disabled: this.state.currentEquipment === null
-                        },
-                        {
-                            caption: 'Настройки', 
-                            icon: <BuildIcon />, 
-                            component: this.state.equipmentSettingsComponent, 
-                            disabled: this.state.equipmentSettingsComponent === null
-                        },
-                        {caption: 'Макросы', icon: <ChangeHistoryIcon />, component: <Macros />},
-                        {caption: 'О программе', icon: <InfoIcon />, component: <About />},
-                    ]}/> */}
                 </AppContext.Provider>
     
-                {/* <div style={{paddingLeft: 20}}>
-                    <TestCrossOffset />
-                </div> */}
-
             </div>
         );
-    
     }
 }
 
@@ -440,4 +374,3 @@ App.defaultProps = {
 };
 
 export default App;
-// export default withStyles(useStyles)(App);

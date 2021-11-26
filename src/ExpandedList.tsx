@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 
 // import List from '@material-ui/core/List';
@@ -37,7 +37,6 @@ const useStylesExpandedList = (theme: any) => ({
     },
 
     primary: {
-
         '& > span': {
             cursor: 'pointer',
         },
@@ -47,7 +46,6 @@ const useStylesExpandedList = (theme: any) => ({
         color: '#000',
         padding: 0,
         margin: 0,
-        // zoom: 0.7,
     },
 
     listItem: {
@@ -78,12 +76,7 @@ const ExpandedList = withStyles(useStylesExpandedList)((props: any) => {
         overflow: 'hidden',
     };
 
-    const style3: React.CSSProperties = {
-        padding: 0,
-    };
-
     const handleListItemClick = (event: any, object: any) => {
-        // console.log(object);
         if(typeof onClick === 'function'){
             onClick(event, object);
         }
