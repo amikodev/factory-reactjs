@@ -1,0 +1,3 @@
+
+global.$RefreshReg$ = () => {};
+global.$RefreshSig$ = () => () => {};

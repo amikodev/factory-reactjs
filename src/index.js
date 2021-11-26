@@ -20,6 +20,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
+import DevApp from './dev/DevApp.tsx';
 
 import { createStore, applyMiddleware } from 'redux';
 import { Provider } from 'react-redux';
@@ -28,23 +29,44 @@ import thunk from 'redux-thunk';
 
 import reducer from './reducers';
 
-// имя используемого оборудования в Equipments.js
-let equipmentName = document.getElementById('root').getAttribute('data-equipment-name');
 
-console.log('equipmentName', equipmentName);
-if(equipmentName === null){
-    window.Equipments.initItems();
-} else{
-    window.Equipments.initItem(equipmentName);
+
+const getApp = () => {
+
+    // приложение для разработки отдельного функционала
+    const pathName = window.location.pathname;
+    if(pathName.match(/^\/dev/)){
+        const app = <DevApp />;
+        return app;
+    }
+
+
+    // основное приложение
+
+    // имя используемого оборудования в Equipments.js
+    let equipmentName = document.getElementById('root').getAttribute('data-equipment-name');
+
+    console.log('equipmentName', equipmentName);
+    if(equipmentName === null){
+        window.Equipments.initItems();
+    } else{
+        window.Equipments.initItem(equipmentName);
+    }
+
+    // redux
+    // let store = createStore(reducer, composeWithDevTools(applyMiddleware(thunk)));
+    let store = createStore(reducer(window.Equipments.getItems()), composeWithDevTools(applyMiddleware(thunk)));
+
+    const app = 
+        <Provider store={store}>
+            <App equipmentName={equipmentName}/>
+        </Provider>    
+    ;
+    return app;
 }
 
-// redux
-// let store = createStore(reducer, composeWithDevTools(applyMiddleware(thunk)));
-let store = createStore(reducer(window.Equipments.getItems()), composeWithDevTools(applyMiddleware(thunk)));
-
+const app = getApp();
 ReactDOM.render(
-    <Provider store={store}>
-        <App equipmentName={equipmentName}/>
-    </Provider>,
+    app,
     document.getElementById('root')
 );

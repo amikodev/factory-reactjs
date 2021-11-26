@@ -26,3 +26,7 @@ yarn-error.log*
 
 package-lock.json
 /.git.bak
+
+/.nyc_output
+*.stl
+

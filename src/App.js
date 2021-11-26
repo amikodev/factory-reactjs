@@ -379,6 +379,7 @@ class App extends React.Component{
                     floatToArray: this.floatToArray,
                     getPoint: this.getPoint,
                     getPointXYZ: this.getPointXYZ,
+                    currentEquipment: Object.assign({}, this.state.currentEquipment),
                 }}>
                     <MainMenu ref={this.mainMenuRef} items={menuItems} />
                     {/* <MainMenu ref={this.mainMenuRef} items={[

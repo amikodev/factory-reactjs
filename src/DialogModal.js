@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
+Copyright © 2020-2021 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
@@ -75,34 +74,37 @@ export default function DialogModal(props) {
         }
     };
 
-    const handleSave = () => {
+    const handleSave = (event) => {
         if(typeof props.onSave === 'function'){
-            props.onSave();
+            props.onSave(event);
         }
     };
 
-    // if(props.open && props.open != prevProps.open){
-    //     console.log('open', props.open);
-    //     handleClickOpen();
-    // }
-
-
-    // prevProps = Object.assign({}, props);
     let fullWidth = props.fullWidth ?? false;
+    let showTitle = props.showTitle ?? true;
+    let open = props.open ?? true;
+    let classes = props.classes ?? {};
+    let classesActions = props.classesActions ?? {};
 
     return (
         <div>
-            {/* <Button variant="outlined" color="primary" onClick={handleClickOpen}>
-                Open dialog
-            </Button> */}
-            <Dialog onClose={handleClose} aria-labelledby="customized-dialog-title" open={true} maxWidth={false} fullWidth={fullWidth}>
-                <DialogTitle id="customized-dialog-title" onClose={handleClose}>
-                    {props.caption}
-                </DialogTitle>
+            <Dialog 
+                onClose={handleClose} 
+                aria-labelledby="customized-dialog-title" 
+                open={open} 
+                classes={classes}
+                maxWidth={false} 
+                fullWidth={fullWidth}
+            >
+                {showTitle &&
+                    <DialogTitle id="customized-dialog-title" onClose={handleClose}>
+                        {props.caption}
+                    </DialogTitle>
+                }
                 <DialogContent dividers>
                     {props.component}
                 </DialogContent>
-                <DialogActions>
+                <DialogActions classes={classesActions}>
                     {props.saveCaption &&
                         <Button autoFocus onClick={handleSave} color="primary">
                             {props.saveCaption}

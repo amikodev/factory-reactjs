@@ -18,482 +18,462 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import React from 'react';
 
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
+import TextField from '@material-ui/core/TextField';
+import Slider from '@material-ui/core/Slider';
+import Button from '@material-ui/core/Button';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
 
 import {AppContext} from '../../AppContext';
+import DialogModal from '../../DialogModal';
+import ParamSide from '../../ParamSide';
 
-// import GCode from '../GCode';
-// import { letterCodes } from '../GCode';
-// import { COORD_SYSTEM_NULL, COORD_SYSTEM_USER } from '../GCode';
+import Vision3D from './Vision3D';
+import { zeroPoint, zeroPoint3D } from './Vision3D';
 
-import * as THREE from 'three';
-import TrackballControls from 'three-trackballcontrols';
-import { CSG } from 'three-csg-ts';
+import Arrows from './Arrows';
+import {
+    ARR_ZERO,
+    ARR_XP, ARR_XM, ARR_YP, ARR_YM, ARR_ZP, ARR_ZM, 
+    ARR_AP, ARR_AM, ARR_BP, ARR_BM, ARR_CP, ARR_CM,
+} from './Arrows';
+
+import GCode from '../../gcode/GCode';
+
 
 import { withStyles } from '@material-ui/core/styles';
-import Equipments from '../../Equipments';
+
+
+const axeSettings = {
+    x: {min: -40000, max: 40000, step: 5},
+    y: {min: -40000, max: 40000, step: 5},
+    z: {min: -40000, max: 40000, step: 5},
+    a: {min: -135, max: 135, step: 5},
+    c: {min: -180, max: 180, step: 5},
+};
+
+
 const useStyles = theme => ({
-    root: {
-    }
+
+    axePoints: {
+        '& thead': {
+
+        },
+        '& th': {
+            backgroundColor: '#DDD',
+            width: '1%',
+        },
+        '& td': {
+            backgroundColor: '#EEE',
+            width: '16.6%',
+        },
+        '& th, & td': {
+            paddingLeft: theme.spacing(1),
+            paddingRight: theme.spacing(1),
+            paddingTop: theme.spacing(0.5),
+            paddingBottom: theme.spacing(0.5),
+        },
+        '& .selected': {
+            color: '#D80',
+        },
+    },
+
+
 });
 
-
-function SimulateScene(){
-
-    let screenWidth = 500;
-    let screenHeight = 500;
-
-    let props = {};
-
-    let material1 = null, material2 = null, material3 = null, material4 = null;
-
-    let rotaryA = null;
-    let rotaryC = null;
-
-    let head = null;
-
-    let co = {x: 0, y: 0};          // смещение от центра
-
-    let equipmentLength = 5.7;
-    let equipmentWidth = 0.3;
-
-    let mount = null;
-    let renderer = null;
-    let scene = null;
-    let geometry = null;
-    let cylinderGeometry = null;
-    let mill = null;
-    let blankMesh = null;
-
-    const initRenderer = () => {
-        renderer = new THREE.WebGLRenderer({antialias: true});
-        renderer.setSize(screenWidth, screenHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
-
-        mount.appendChild(renderer.domElement);
-    };
-
-    const initMaterials = () => {
-        material1 = new THREE.MeshStandardMaterial({color: 0x7e31eb});
-        material2 = new THREE.MeshStandardMaterial({color: 0x317eeb});
-        material3 = new THREE.MeshStandardMaterial({color: 0x119e4b});
-        material4 = new THREE.MeshStandardMaterial({color: 0xeeeeee});
-
-    };
-
-    const init = () => {
-        // initRender();
-        initMaterials();
-
-        scene = new THREE.Scene();
-        // let camera = new THREE.PerspectiveCamera(75, screenWidth/screenHeight, 0.1, 1000);
-        let camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 1000);
-
-        geometry = new THREE.BoxGeometry(1, 1, 1);
-        cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
-
-        const light = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
-        scene.add(light);
-
-        const light2 = new THREE.DirectionalLight( 0xffffff, 0.4, 100 );
-        light2.position.set( 6, 12, 2 ); //default; light shining from top
-        light2.castShadow = true; // default false
-        scene.add( light2 );
-        
-        //Set up shadow properties for the light
-        light2.shadow.mapSize.width = 512; // default
-        light2.shadow.mapSize.height = 512; // default
-        light2.shadow.camera.near = 0.5; // default
-        light2.shadow.camera.far = 500; // default
-
-        camera.position.x = 30;
-        camera.position.y = 0;
-        camera.position.z = 0;
-
-        let controls = new TrackballControls(camera, renderer.domElement);
-        // controls.rotateSpeed = 1.0;
-        // controls.zoomSpeed = 1.2;
-        // controls.panSpeed = 0.8;
-        // controls.noZoom = false;
-        // controls.noPan = false;
-        // controls.staticMoving = true;
-        // controls.dynamicDampingFactor = 0.3;
-
-        controls.update();
-
-        let animate = () => {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        };
-        animate();
-
-    };
-
-    let createRotaryA = () => {
-        let group = new THREE.Group();
-        
-        let cube3 = new THREE.Mesh(geometry, material2);
-        translateCoord(cube3, {x: 0.75 +co.x, y: 1.5 +co.y, z: -0.5}, {x: 2, y: 2, z: 3});
-        cube3.castShadow = true;
-        cube3.receiveShadow = true;
-        group.add(cube3);
-
-        let cylinder2 = new THREE.Mesh(cylinderGeometry, material2);
-        cylinder2.rotation.z = Math.PI/2;
-        translateCoord(cylinder2, {x: 0.75, y: 0.2, z: 1}, {x: 2, y: 2, z: 0.5});
-        group.add(cylinder2);
-
-        let cylinder3 = new THREE.Mesh(cylinderGeometry, material3);
-        cylinder3.rotation.z = Math.PI/2;
-        translateCoord(cylinder3, {x: 0.75, y: 2.7, z: 1}, {x: 2, y: 2, z: 0.5});
-        group.add(cylinder3);
-
-        mill = new THREE.Mesh(cylinderGeometry, material4);
-        translateCoord(mill, {x: 1.75-equipmentWidth/2 +co.x, y: 2.5-equipmentWidth/2 +co.y, z: -equipmentLength}, {x: equipmentWidth, y: equipmentWidth, z: equipmentLength});
-        group.add(mill);
-
-        return group;
-    }
-
-    let createRotaryC = () => {
-        let group = new THREE.Group();
-
-        let cube = new THREE.Mesh(geometry, material1);
-        translateCoord(cube, {x: 0, y: 0, z: 0}, {x: 3.5, y: 1, z: 5.5});
-        cube.castShadow = true;
-        cube.receiveShadow = true;
-        group.add(cube);
-
-        let cube2 = new THREE.Mesh(geometry, material1);
-        translateCoord(cube2, {x: 0, y: 1, z: 3.5}, {x: 3.5, y: 2.5, z: 2});
-        cube2.castShadow = true;
-        cube2.receiveShadow = true;
-        group.add(cube2);
-
-        let cylinder = new THREE.Mesh( cylinderGeometry, material1 );
-        translateCoord(cylinder, {x: 0.75, y: 1.5, z: 5.5}, {x: 2, y: 2, z: 0.5});
-        group.add(cylinder);
-
-        return group;
-    }
-
-    let createHead = () => {
-        let groupA = createRotaryA();
-        let groupC = createRotaryC();
-
-        let pivotA = new THREE.Group();
-        pivotA.position.set(0, 1.25, 1.75);
-        groupA.position.set(0, -1.25, -1.75);
-        pivotA.add(groupA);
-        
-        let pivotC = new THREE.Group();
-        pivotC.position.set(2.5, 0, 1.75);
-        groupC.position.set(-2.5, 0, -1.75);
-        pivotC.add(groupC);
-
-        groupC.add(pivotA);
-
-        head = new THREE.Group();
-        head.position.set(-co.y, 0, -co.x);
-        head.add(pivotC);
-        scene.add(head);
-
-        rotaryA = pivotA;
-        rotaryC = pivotC;
-    }
-
-    const translateCoord = (obj, point3d, size) => {
-        let position = {
-            x: point3d.y + size.y/2,
-            y: point3d.z + size.z/2,
-            z: point3d.x + size.x/2
-        };
-        let scale = {
-            x: size.y,
-            y: size.z,
-            z: size.x
-        };
-
-        obj.position.x = position.x;
-        obj.position.y = position.y;
-        obj.position.z = position.z;
-        obj.scale.x = scale.x;
-        obj.scale.y = scale.y;
-        obj.scale.z = scale.z;
-    }
-
-    const createBlank = () => {
-        let material1 = new THREE.MeshStandardMaterial({color: 0x666666});
-        let mesh = new THREE.Mesh(geometry, material1);
-        translateCoord(mesh, {x: -4, y: -4, z: -2-equipmentLength+0.5}, {x: 8, y: 8, z: 2});
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        // material1.wireframe = true;
-        scene.add(mesh);
-        blankMesh = mesh;
-    }
-
-    const cutBlank = () => {
-
-        let material4 = new THREE.MeshStandardMaterial({color: 0xff0000});
-        let millCut = new THREE.Mesh(cylinderGeometry, material4);
-        translateCoord(millCut, 
-            {
-                x: 1.75-equipmentWidth/2 +co.x + props.X, 
-                y: 2.5-equipmentWidth/2 +co.y + props.Y, 
-                z: -equipmentLength + props.Z
-            }, {
-                x: equipmentWidth, 
-                y: equipmentWidth, 
-                z: equipmentLength
-            }
-        );
-
-        let position = new THREE.Vector3();
-        let quaternion = new THREE.Quaternion();
-        mill.getWorldPosition(position);
-        mill.getWorldQuaternion(quaternion);
-        millCut.position.copy(position);
-        millCut.rotation.setFromQuaternion(quaternion);
-
-        blankMesh.updateMatrix();
-        millCut.updateMatrix();
-
-        let subRes = CSG.subtract(this.blankMesh, millCut);
-        // subRes.updateMatrix();
-
-        scene.remove(blankMesh);
-        blankMesh = subRes;
-        scene.add(blankMesh);
-        
-    };
-
-
-    const show = () => {
-
-        createHead();
-
-    };
-
-    const render = () => {
-
-        if(head !== null){
-
-            let aa = props.A;
-            let ac = props.C;
-            let rh = equipmentLength +1.3;
-
-            const { sin, cos, atan2, sqrt, PI } = Math;
-
-            let aa2 = aa *PI/180;
-            let ac2 = ac *PI/180;
-
-            let tx = 0;
-            let ty = 0;
-            let tz = -equipmentLength -1.3;
-
-
-            const rotX = (point, angle) => {
-                let x = point.x;
-                let y = point.y*cos(angle) - point.z*sin(angle);
-                let z = point.z*sin(angle) + point.z*cos(angle);
-                return {x, y, z};
-            }
-
-            const rotY = (point, angle) => {
-                let x =  point.x*cos(angle) + point.z*sin(angle);
-                let y =  point.y;
-                let z = -point.x*sin(angle) + point.z*cos(angle);
-                return {x, y, z};
-            }
-
-            const rotZ = (point, angle) => {
-                let x = point.x*cos(angle) - point.y*sin(angle);
-                let y = point.x*sin(angle) + point.y*cos(angle);
-                let z = point.z;
-                return {x, y, z};
-            }
-
-            let point = {x: co.x, y: co.y, z: -rh};
-            point = rotY(point, aa2);
-            point = rotZ(point, ac2);
-
-            let dx = tx - point.x;
-            let dy = ty - point.y;
-            let dz = tz - point.z;
-            // dx = dy = dz = 0;
-
-            let x = props.X + dx;
-            let y = props.Y + dy;
-            let z = props.Z + dz;
-
-            head.position.set(y, z, x);
-
-            rotaryA.rotation.x = props.A *Math.PI/180;
-            rotaryC.rotation.y = props.C *Math.PI/180;
-
-            // cutBlank();
-        }        
-    };
-
-    const getRenderer = () => {
-        return renderer;
-    };
-
-    const setMount = (m) => {
-        mount = m;
-    };
-
-    const setProps = (p) => {
-        props = p;
-    };
-
-    /**
-     * Обновление объекта подвижной головы
-     */
-    const updateHead = () => {
-        if(scene === null) return;
-
-        if(head !== null){
-            scene.remove(head);
-        }
-
-        createHead();
-        render();
-    }
-
-    /**
-     * Установка смещения от центра
-     */
-    const setCenterOffset = (sco) => {
-        co = sco;
-        updateHead();
-    };
-
-    /**
-     * Установка длины инструмента
-     * @param {numeric} value длина инструмента
-     */
-    const setEquipmentLength = (value) => {
-        equipmentLength = value;
-        updateHead();
-    }
-
-    /**
-     * Установка ширины (диаметра) инструмента
-     * @param {numeric} value ширина инструмента
-     */
-     const setEquipmentWidth = (value) => {
-        equipmentWidth = value;
-        updateHead();
-    }
-
-    return {
-        init, show, initRenderer, getRenderer, render, setMount, setProps, 
-        setCenterOffset,
-        setEquipmentLength, setEquipmentWidth,
-    };
-};
 
 
 /**
  * Симулятор
  */
- class Simulation extends React.Component{
-
+class Simulation extends React.Component{
     static contextType = AppContext;
 
     constructor(props){
         super(props);
 
+        this.handleChangePointSelected = this.handleChangePointSelected.bind(this);
+
+        const { visionWidth, equipmentNames } = props;
+
         this.state = {
 
-        }
+            // mounted: false,
 
-        this.simutateScene = new SimulateScene(props);
+            co: {x: 0, y: 0},
+
+            equipmentNames,
+            equipmentFile: 'http://127.0.0.1:3003/models/mills/mill6.obj',
+            equipmentNumber: 0,
+
+            visionWidth,
+
+            selectedSimulationPoints: null,
+            simulationPoint: Object.assign({}, zeroPoint),
+
+            userZeroPoint: Object.assign({}, zeroPoint), 
+            currentPoint: Object.assign({}, zeroPoint),
+            selectedPoint: Object.assign({}, zeroPoint, {x: '', y: '', z: '', a: '', b: '', c: ''}),
+            
+        };
+
+        this.gc = new GCode();
+
+
+        this.refVision3D = React.createRef();
 
     }
+
 
     componentDidMount(){
 
-        const ss = this.simutateScene;
-        ss.initRenderer();
-
-        let parseReady = () => {
-
-            let renderer = ss.getRenderer();
-            let posInfo = renderer.domElement.getBoundingClientRect();
-            if(posInfo.width === 0 && posInfo.height === 0){
-                window.setTimeout(parseReady, 100);
-                return;
+        const psVals = ParamSide.API.readStorage(this.props.item.name+"-"+"params1", (name, value) => {
+            if(value !== null){
+                this.handleChangeValueParamSide(name, value);
             }
+        });
 
-            ss.init();
-            ss.show();
-            // ss.createBlank();
-        }
-
-        window.setTimeout(parseReady, 100);
+        // this.setState({mounted: true});
 
     }
 
-    handleCutBtnClick(event){
-        const ss = this.simutateScene;
-        ss.cutBlank();
+    componentWillUnmount(){
+
+        const vs = this.refVision3D.current.getVisionScene();
+        vs.setAnimateEnabled(false);
+
+        // this.setState({mounted: false});
+
     }
 
-    componentWillUpdate(props){
+
+    handleSimulationArrowDown({ arrow, axeName }){
+        // console.log('Simulation down', arrow, axeName);
+        let { simulationPoint } = this.state;
+        let step = typeof axeSettings[axeName] !== 'undefined' ? axeSettings[axeName].step : 1;
+
+        switch(arrow){
+            case ARR_XM:
+            case ARR_YM:
+            case ARR_ZM:
+            case ARR_AM:
+            case ARR_BM:
+            case ARR_CM:
+                step = -step;
+                break;
+            default:
+                break;
+        }
+
+        simulationPoint[axeName] += step;
+        if(typeof axeSettings[axeName] !== 'undefined'){
+            if(simulationPoint[axeName] < axeSettings[axeName].min)
+                simulationPoint[axeName] = axeSettings[axeName].min;
+            if(simulationPoint[axeName] > axeSettings[axeName].max)
+                simulationPoint[axeName] = axeSettings[axeName].max;
+        }
+
+        if(arrow === ARR_ZERO){
+            Object.keys(simulationPoint).map(axeName => {
+                simulationPoint[axeName] = 0;
+            });
+        }
+
+        this.setState({simulationPoint});
+    }
+
+    handleSimulationArrowUp({ arrow, num, dir }){
+        // console.log('Simulation up', arrow, num, dir);
+    }
+
+    /**
+     * Изменение значения параметра
+     * @param {string} name имя параметра
+     * @param {string} value значение параметра
+     */
+    handleChangeValueParamSide(name, value){
+        let co = this.state.co;
+        switch(name){
+            case 'coX':
+                co.x = Number(value);
+                this.setState({ co });
+                break;
+            case 'coY':
+                co.y = Number(value);
+                this.setState({ co });
+                break;
+            case 'eqFile':
+                this.setState({ equipmentFile: (value)});
+                break;
+            case 'eqNumber':
+                this.setState({ equipmentNumber: (value)});
+                break;
+            default:
+                break;
+        }
 
     }
 
-    componentDidUpdate(prevProps){
-        // console.log('componentDidUpdate', JSON.stringify(this.props.co), JSON.stringify(prevProps.co), JSON.stringify(this.props.coX), JSON.stringify(prevProps.coX));
-        const ss = this.simutateScene;
-        if( 
-            (JSON.stringify(this.props.coX) !== JSON.stringify(prevProps.coX)) ||
-            (JSON.stringify(this.props.coY) !== JSON.stringify(prevProps.coY)) 
-        ){
-            ss.setCenterOffset({x: this.props.coX, y: this.props.coY});            
-        }
-
-        if( (JSON.stringify(this.props.equipmentLength) !== JSON.stringify(prevProps.equipmentLength)) ){
-            ss.setEquipmentLength(this.props.equipmentLength);
-        }
-
-        if( (JSON.stringify(this.props.equipmentWidth) !== JSON.stringify(prevProps.equipmentWidth)) ){
-            ss.setEquipmentWidth(this.props.equipmentWidth);
-        }
-        
+    handleChangePointSelected(point, length){
+        let { selectedPoint } = this.state;
+        const vs = this.refVision3D.current.getVisionScene();
+        Object.keys(point).map(axeName => {
+            selectedPoint[axeName] = Number(point[axeName]).toFixed(3);
+        })
+        // selectedPoint = Object.assign({}, zeroPoint, point);
+        this.setState({selectedPoint});
+        vs.setUserSelectedPoint(Object.assign({}, selectedPoint), length);
+        // console.log('handleChangePointSelected', point);
     }
+
+    handleSelectedPointInputChange(event, axeName){
+        const { selectedPoint } = this.state;
+        const vs = this.refVision3D.current.getVisionScene();
+        let value = event.target.value;
+        selectedPoint[axeName] = value;
+        this.setState({selectedPoint});
+        vs.setUserSelectedPoint(Object.assign({}, selectedPoint), 100);
+
+        // установка точки для MoveHelper
+        let point = Object.assign({}, zeroPoint3D);
+        Object.keys(point).map(axeName => {
+            let val = Number(selectedPoint[axeName]);
+            point[axeName] = !isNaN(val) ? val : 0.0;
+        });
+        let userZeroMh1 = vs.getUserSelectedHelper();
+        userZeroMh1.setPoint(point);
+
+    }
+
+    handleSelectedRunClick(event){
+
+        let { selectedPoint, simulationPoint } = this.state;
+
+        let gc = this.gc;
+
+        let p1 = Object.assign({}, zeroPoint, simulationPoint);
+        let p2 = Object.assign({}, zeroPoint, selectedPoint);
+        Object.keys(p2).map(axeName => {
+            p2[axeName] = Number(p2[axeName]);
+        });
+
+        let speed = 50;
+        if(speed === 0) speed = 10;
+        let dl = speed / (1000/50);
+
+        let length = gc.calcPointsDistance(p1, p2);
+        let intervalTime = 50;
+        let lpos = 0;
+
+        if(length > 0){
+            let intervalID = window.setInterval(() => {
+                lpos += dl;
+                let cPoint = null;
+                if(lpos < length){
+                    cPoint = gc.calcPointWithProportion(p1, p2, lpos/length);
+                } else{
+                    cPoint = Object.assign({}, p2);
+                    window.clearInterval(intervalID);
+                }
+                this.setState({simulationPoint: cPoint});
+            }, intervalTime);
+        }
+
+    }
+
+    handleSelectedPointRemoveClick(event){
+        const { selectedPoint } = this.state;
+        const vs = this.refVision3D.current.getVisionScene();
+        Object.keys(selectedPoint).map(axeName => {
+            selectedPoint[axeName] = '';
+        });
+        this.setState({selectedPoint});
+        vs.removeUserSelectedPoint();
+
+        // установка точки для MoveHelper
+        let point = Object.assign({}, zeroPoint3D);
+        let userZeroMh1 = vs.getUserSelectedHelper();
+        userZeroMh1.setPoint(point);
+    }
+
+
+
 
     render(){
 
-        const ss = this.simutateScene;
-        ss.setProps(this.props);
-        ss.render();
+        const { item, classes } = this.props;
+        const { userZeroPoint, currentPoint, simulationPoint, selectedPoint, co } = this.state;
+
+        let groupComponent = (
+            <>
+            {this.state.selectedSimulationPoints !== null &&
+                <>
+                    <table className={classes.axePoints}>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>X</th>
+                                <th>Y</th>
+                                <th>Z</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {this.state.selectedSimulationPoints.map((point, ind) => {
+                            return (
+                                <tr key={ind}>
+                                    <th>p{ind}</th>
+                                    <td>{point.x.toFixed(3)}</td>
+                                    <td>{point.y.toFixed(3)}</td>
+                                    <td>{point.z.toFixed(3)}</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                    </table>
+                </>
+            }
+            </>
+        );
 
         return (
-            <div>
-                <div ref={ref => (ss.setMount(ref))} />
-                {/* <button onClick={e => this.handleCutBtnClick(e)}>Cut</button> */}
-            </div>
+            <>
+            <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={5} lg={4}>
+                    {this.state.visionWidth !== null &&
+                    <Vision3D
+                        ref={this.refVision3D}
+                        width={Math.min(500, this.state.visionWidth-50)}
+
+                        X={simulationPoint.x}
+                        Y={simulationPoint.y}
+                        Z={simulationPoint.z}
+                        A={simulationPoint.a}
+                        B={simulationPoint.b}
+                        C={simulationPoint.c}
+                        coX={co.x}
+                        coY={co.y}
+                        equipmentFile={this.state.equipmentFile}
+                        equipmentNumber={this.state.equipmentNumber}
+                        
+                        onChangePointSelected={this.handleChangePointSelected}
+
+                        // needAnimate={this.state.mounted}
+                    />
+                    }
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+
+                    <Arrows 
+                        onArrowDown={(arrow, num, dir) => this.handleSimulationArrowDown(arrow, num, dir)} 
+                        onArrowUp={(arrow, num, dir) => this.handleSimulationArrowUp(arrow, num, dir)} 
+                    />
+
+                    <hr/>
+
+                    <table className={classes.axePoints}>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>X</th>
+                                <th>Y</th>
+                                <th>Z</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th>{('Ноль')}</th>
+                                <td>{userZeroPoint.x.toFixed(3)}</td>
+                                <td>{userZeroPoint.y.toFixed(3)}</td>
+                                <td>{userZeroPoint.z.toFixed(3)}</td>
+                                <td>{userZeroPoint.a.toFixed(3)}</td>
+                                <td>{userZeroPoint.b.toFixed(3)}</td>
+                                <td>{userZeroPoint.c.toFixed(3)}</td>
+                            </tr>
+                            <tr>
+                                <th>{('Текущие')}</th>
+                                <td>{currentPoint.x.toFixed(3)}</td>
+                                <td>{currentPoint.y.toFixed(3)}</td>
+                                <td>{currentPoint.z.toFixed(3)}</td>
+                                <td>{currentPoint.a.toFixed(3)}</td>
+                                <td>{currentPoint.b.toFixed(3)}</td>
+                                <td>{currentPoint.c.toFixed(3)}</td>
+                            </tr>
+                            <tr>
+                                <th className="selected">{('Выбранные')}</th>
+                                <td> <TextField size="small" value={selectedPoint.x} variant="standard" onChange={e => this.handleSelectedPointInputChange(e, 'x')} /> </td>
+                                <td> <TextField size="small" value={selectedPoint.y} variant="standard" onChange={e => this.handleSelectedPointInputChange(e, 'y')} /> </td>
+                                <td> <TextField size="small" value={selectedPoint.z} variant="standard" onChange={e => this.handleSelectedPointInputChange(e, 'z')} /> </td>
+                                <td> <TextField size="small" value={selectedPoint.a} variant="standard" onChange={e => this.handleSelectedPointInputChange(e, 'a')} /> </td>
+                                <td> <TextField size="small" value={selectedPoint.b} variant="standard" onChange={e => this.handleSelectedPointInputChange(e, 'b')} /> </td>
+                                <td> <TextField size="small" value={selectedPoint.c} variant="standard" onChange={e => this.handleSelectedPointInputChange(e, 'c')} /> </td>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <td colSpan={6}>
+                                    <Button 
+                                        variant="contained" 
+                                        color="primary" 
+                                        disabled={isNaN(parseFloat(selectedPoint.x))} 
+                                        onClick={e => this.handleSelectedRunClick(e)}>
+                                            {('Поехали к выбранным')}
+                                    </Button>
+                                    <Button 
+                                        variant="contained" 
+                                        color="" 
+                                        onClick={e => this.handleSelectedPointRemoveClick(e)}>
+                                            {('Очистить')}
+                                    </Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+
+                    <ParamSide 
+                        ref={this.refParamSide}
+                        name={item.name+"-"+"params1"}
+                        items={[
+                            { name: 'coX', caption: ('CenterOffset X'), value: this.state.co.x, type: 'number', },
+                            { name: 'coY', caption: ('CenterOffset Y'), value: this.state.co.y, type: 'number', },
+                            { },
+                            { name: 'eqFile', caption: ('Equipment file'), value: this.state.equipmentFile, type: 'text' },
+                            { name: 'eqNumber', caption: ('Equipment number'), value: this.state.equipmentNumber, type: 'select', list: this.state.equipmentNames },
+                            { },
+                            { name: null, caption: ('Group 1'), type: 'group', component: groupComponent },
+                            { },
+                        ]}
+                        onChange={(name, value) => this.handleChangeValueParamSide(name, value)}
+                    />
+
+                </Grid>
+            </Grid>
+
+
+            </>
         );
     }
 
 }
 
 Simulation.defaultProps = {
-    X: 0,
-    Y: 0,
-    Z: 0,
-    A: 0,
-    B: 0,
-    C: 0,
-    coX: 0,             // center offset X
-    coY: 0,             // center offset Y
-    equipmentLength: 1,
-    equipmentWidth: 1,
+    item: {},                   // свойства оборудования
+
+    visionWidth: null,
+    equipmentNames: [],
+
 };
 
-export default Simulation;
+export default withStyles(useStyles)(Simulation);

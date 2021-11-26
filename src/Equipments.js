@@ -1,6 +1,6 @@
 /*
 amikodev/factory-reactjs - Industrial equipment management with ReactJS
-Copyright © 2020 Prihodko Dmitriy - asketcnc@yandex.ru
+Copyright © 2020-2021 Prihodko Dmitriy - asketcnc@yandex.ru
 */
 
 /*
@@ -155,7 +155,10 @@ class Equipments extends React.Component {
                 EquipmentsAPI.itemsWs[item.name] = ws;
             }
 
-            wsConnect();
+            let wsEnabled = item.wsEnabled ?? true;
+            if(wsEnabled){
+                wsConnect();
+            }
 
             _this.setState({items: items});
             return null;
@@ -260,7 +263,8 @@ window.Equipments = (() => {
             url: '192.168.1.65', 
             // url: '192.168.1.113', 
             stateConnect: Equipments.STATE_NONE, 
-            params: {x: 1250, y: 2500, z: 120}
+            params: {x: 1250, y: 2500, z: 120},
+            wsEnabled: false,
         },
         // {
         //     type: Equipments.TYPE_CNC_ROUTER, 
@@ -278,13 +282,14 @@ window.Equipments = (() => {
             name: 'freqConv1', 
             url: '192.168.4.3', 
             stateConnect: Equipments.STATE_NONE, 
-            params: {}
+            params: {},
+            wsEnabled: false,
         },
         // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
         // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
         // {type: Equipments.TYPE_FREQ_CONVERTER, caption: 'Частотник', name: 'freqConv1', url: '192.168.4.3', params: {}},
-        {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 1', name: 'rmt1_1', url: '192.168.4.4', stateConnect: Equipments.STATE_NONE, params: {}},
-        {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 2', name: 'rmt1_2', url: '192.168.4.5', stateConnect: Equipments.STATE_NONE, params: {}},
+        {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 1', name: 'rmt1_1', url: '192.168.4.4', stateConnect: Equipments.STATE_NONE, params: {}, wsEnabled: false},
+        {type: Equipments.TYPE_RMT_1, caption: 'Минитрактор 2', name: 'rmt1_2', url: '192.168.4.5', stateConnect: Equipments.STATE_NONE, params: {}, wsEnabled: false},
         {
             type: Equipments.TYPE_CNC_5_AXIS_ROUTER,
             caption: '5 Axis',
@@ -292,6 +297,7 @@ window.Equipments = (() => {
             url: '192.168.1.65',
             stateConnect: Equipments.STATE_NONE,
             params: {},
+            wsEnabled: false,
         },
     ];
     // console.log(window.location, window.location.hostname);

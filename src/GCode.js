@@ -552,7 +552,6 @@ var GCode = (function(){
         }
 
 
-        let debugCircleCount = 0;
         const drawCircle = (pMoveParams, pMoveNextParams) => {
             let dash = [];
 
@@ -956,7 +955,7 @@ var GCode = (function(){
                     if(!processFrame)
                         return null;
 
-                        progParams.circle.inc = {I: 0, J: 0, K: 0};
+                    progParams.circle.inc = {I: 0, J: 0, K: 0};
                 });
             }
 

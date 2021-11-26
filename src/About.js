@@ -35,7 +35,14 @@ class About extends React.Component{
             <Typography component="p" gutterBottom>
                 {('Управление промышленным оборудованием и техникой.')}
             </Typography>
-
+            <Typography component="p" gutterBottom>
+                {('Типы поддерживаемого оборудования')}:
+                <ul>
+                    <li>{('3-х координатный ЧПУ станок')};</li>
+                    <li>{('Частотный преобразователь')};</li>
+                    <li>{('5-ти координатный ЧПУ станок с поворотно-наклонной головой')}.</li>
+                </ul>
+            </Typography>
             </React.Fragment>
         );
     }
