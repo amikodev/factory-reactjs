@@ -98,9 +98,19 @@ class DraftMill3DStrategy extends Strategy{
     private _ra: number;
     private _rDraftA: number; 
 
+    // process areas
     private _workPoints: Point3[] = [];
     private _currentZ: number = 0;
     private _areas: ScanArea[] = [];
+    private _scanWidth: number = 0;
+    private _scanHeight: number = 0;
+    private _map: Uint8Array = new Uint8Array(0);   // карта черновой обработки
+    private _areaFirstPointFounded: boolean = false;
+    private _areaEntrance: ScanAreaEntrance = {
+        p1: {mapX: 0, mapY: 0},
+        p2: {mapX: 0, mapY: 0},
+    };
+
 
     constructor(params: DraftMill3DStrategyParams, accuracy: number = 0.1){
         super();
@@ -142,7 +152,7 @@ class DraftMill3DStrategy extends Strategy{
     /**
      * Поиск поверхностей
      */
-    private findSubAreas(): ScanArea[]{
+    private findSubAreas(){
 
         const link = this._params.link;
         if(!link) return [];
@@ -156,6 +166,8 @@ class DraftMill3DStrategy extends Strategy{
 
         const scanWidth = Math.floor(link.size.x/diam*2-1);
         const scanHeight = Math.floor(link.size.y/diam*2-1);
+        this._scanWidth = scanWidth;
+        this._scanHeight = scanHeight;
 
         /**
          * Грубая карта всей поверхности.
@@ -166,6 +178,7 @@ class DraftMill3DStrategy extends Strategy{
          *   3 - путь для выборки внутренней части
          */
         const map = new Uint8Array(scanWidth*scanHeight);
+        this._map = map;
 
         for(let k2=0; k2<scanHeight; k2++){
             for(let k1=0; k1<scanWidth; k1++){
@@ -198,200 +211,12 @@ class DraftMill3DStrategy extends Strategy{
                 if(avail){
                     let mapOffset = k2*scanWidth + k1;
                     map[mapOffset] = 1;
-
-                    // if(ctx !== null){
-                    //     ctx.beginPath();
-                    //     ctx.ellipse(xca, yca, ra, ra, 0, 0, Math.PI*2);
-                    //     ctx.fillStyle = '#999';
-                    //     ctx.fill();
-                    // }
-
                 }
             }
         }
 
-        // console.log(map);
-
-
-        let areas: ScanArea[] = [];
-
-        let areaFirstPointFounded = false;
-        let areaEntrance: ScanAreaEntrance = {
-            p1: {mapX: 0, mapY: 0},
-            p2: {mapX: 0, mapY: 0},
-        };
-
-        const getMapCell = (sx: number, sy: number): number => {
-            if(sx < 0 || sx >= scanWidth || sy < 0 || sy >= scanHeight)
-                return -1;
-
-            let offset = sy*scanWidth + sx;
-            return map[offset];
-        }
-
-
-        const fillArea = (sx: number, sy: number) => {
-            let mapCell = getMapCell(sx, sy);
-
-            if(mapCell === 1){
-                let offset = sy*scanWidth + sx;
-                map[offset] = 2;
-
-                if(!areaFirstPointFounded){
-                    [
-                        [sx-1, sy],
-                        [sx+1, sy],
-                        [sx, sy-1],
-                        [sx, sy+1],
-                    ].forEach(el => {
-                        if(areaFirstPointFounded) return;
-
-                        if([1, 2].includes( getMapCell(el[0], el[1]) )){
-                            areaFirstPointFounded = true;
-                            areaEntrance.p1 = {mapX: sx, mapY: sy};
-                            areaEntrance.p2 = {mapX: el[0], mapY: el[1]};
-                        }
-                    });
-                }
-
-                fillArea(sx+0, sy-1);
-                fillArea(sx+1, sy+0);
-                fillArea(sx+0, sy+1);
-                fillArea(sx-1, sy+0);
-            }
-        }
-        
-        const findAreas = () => {
-            for(let i=0; i<map.length; i++){
-                if(map[i] === 1){
-
-                    let mapX = i % scanWidth;
-                    let mapY = Math.floor(i/scanWidth);
-
-                    areaFirstPointFounded = false;
-                    fillArea(mapX, mapY);
-
-                    let area: ScanArea = {
-                        entryPointFounded: areaFirstPointFounded,
-                        entranceMap: Object.assign({}, areaEntrance),
-                        entrance: {
-                            p1: {x: areaEntrance.p1.mapX * r + r, y: areaEntrance.p1.mapY * r + r},
-                            p2: {x: areaEntrance.p2.mapX * r + r, y: areaEntrance.p2.mapY * r + r},
-                        },
-                        paths: [],
-                        perimeterPaths: [],
-                    };
-
-                    areas.push(area);
-                }
-            }
-        }
-
-        const findDraftPathInAreas = () => {
-
-            let path: ScanAreaPath = {
-                points: []
-            };
-
-            let lastSx: number = -1;
-            let lastSy: number = -1;
-
-            let vectorAngle = -0.1;
-
-            const addPoint = (sx: number, sy: number) => {
-                let point: PathPoint = {
-                    x: sx * r + r, 
-                    y: sy * r + r
-                };
-
-                let currentVectorAngle = Math.atan2(sy-lastSy, sx-lastSx);
-                if(path.points.length >= 2){
-                    if(currentVectorAngle === vectorAngle){
-                        path.points.splice(-1, 1);      // remove last item
-                    }
-                }
-                vectorAngle = currentVectorAngle;
-                path.points.push(point);
-            }
-
-            const sumDist = (sx: number, sy: number): number => {
-                const sDist = Math.abs(sx-lastSx) + Math.abs(sy-lastSy);
-                return sDist;
-            }
-
-            const findPath = (area: ScanArea, sx: number, sy: number) => {
-                let mapCell = getMapCell(sx, sy);
-
-                const matr: [number, number][] = [ [sx-1, sy], [sx+1, sy], [sx, sy-1], [sx, sy+1] ];
-
-                if(mapCell === 2){
-                    let offset = sy*scanWidth + sx;
-                    map[offset] = 3;
-
-                    // случай быстрого перехода
-                    if(sumDist(sx, sy) === 2){
-
-                        // простое решение на один шаг
-                        let needMapPointFounded = false;
-                        matr.forEach((el: [number, number]) => {
-                            if(needMapPointFounded) return;
-                            if( getMapCell(el[0], el[1]) === 3 && sumDist(el[0], el[1]) === 1 ){
-                                needMapPointFounded = true;
-                                addPoint(el[0], el[1]);
-                                lastSx = el[0]; lastSy = el[1];
-                            }
-                        });
-
-                    } else if(sumDist(sx, sy) > 2){
-
-                        // длинный переход
-                        let needMapPointFounded = false;
-                        matr.forEach((el: [number, number]) => {
-                            if(needMapPointFounded) return;
-                            if( getMapCell(el[0], el[1]) === 3 ){
-                                needMapPointFounded = true;
-                                // начало нового пути
-                                area.paths.push(path);
-                                path = {
-                                    points: []
-                                };
-                                vectorAngle = -0.1;
-                                addPoint(el[0], el[1]);
-                                lastSx = el[0]; lastSy = el[1];
-                            }
-                        });
-
-                    }
-
-                    addPoint(sx, sy);
-
-                    lastSx = sx;
-                    lastSy = sy;
-
-                    findPath(area, sx+0, sy-1);
-                    findPath(area, sx+0, sy+1);
-                    findPath(area, sx+1, sy+0);
-                    findPath(area, sx-1, sy+0);
-                }
-            }
-
-            areas.forEach(area => {
-                path = {
-                    points: []
-                };
-
-                lastSx = area.entranceMap.p1.mapX;
-                lastSy = area.entranceMap.p1.mapY;
-                findPath(area, area.entranceMap.p1.mapX, area.entranceMap.p1.mapY);
-
-                area.paths.push(path);
-            });
-        }
-
-        findAreas();
-        findDraftPathInAreas();
-
-        return areas;
+        this.findAreas();
+        this.findDraftPathInAreas();
     }
 
     /**
@@ -438,7 +263,6 @@ class DraftMill3DStrategy extends Strategy{
     
             // проход по дуге
             for(let i=a1; i<=a2; i += dAngle){
-                // let iAngle = i *Math.PI/180;
                 let sx = x + ra * Math.cos(i);
                 let sy = y + ra * Math.sin(i);
                 sx = Math.floor(sx);
@@ -447,7 +271,6 @@ class DraftMill3DStrategy extends Strategy{
                 if(sx < 0 || sx >= width || sy < 0 || sy >= height)
                     continue;
 
-                // this.drawPixel(sx, sy, 0x00, 0x00, 0xB8, 0xFF);
                 let index = (sy)*width + (sx);
                 index = Math.floor(index);
 
@@ -457,16 +280,12 @@ class DraftMill3DStrategy extends Strategy{
                     fxa = x;
                     fya = y;
                     break;
-                } else{
-                    // fxa = x;
-                    // fya = y;
                 }
             }
 
             if(!collisionFounded){
                 fxa = x;
                 fya = y;
-
             }
         }
 
@@ -474,7 +293,6 @@ class DraftMill3DStrategy extends Strategy{
         const dy = fya - yca;
 
         const distance = Math.sqrt(dx*dx + dy*dy);
-        // console.log({dx, dy, distance});
 
         return {founded: collisionFounded, free, xa: fxa, ya: fya, distance};
     }
@@ -487,14 +305,10 @@ class DraftMill3DStrategy extends Strategy{
      */
     private findPerimeterPath(area: ScanArea, maxStepsCount: number, xca: number, yca: number){
         
-        
         let sd = this.scanDirection(Direction.Left, this._rDraftA*2, xca, yca, this._rDraftA*2);
 
         const perimeterFirstXa = sd.xa;
         const perimeterFirstYa = sd.ya;
-
-        // console.log(sd);
-
 
         let xa = sd.xa;
         let ya = sd.ya;
@@ -537,17 +351,9 @@ class DraftMill3DStrategy extends Strategy{
             }
 
             if(lastXa !== xa || lastYa !== ya){
-                // if(c < 100) console.log({xa, ya});
 
                 let currentVectorAngle = Math.atan2(ya-lastYa, xa-lastXa);
                 if(currentVectorAngle !== vectorAngle){
-                    // if(ctx !== null){
-                    //     ctx.beginPath();
-                    //     ctx.ellipse(xa, ya, 1, 1, 0, 0, Math.PI*2);
-                    //     ctx.fillStyle = '#00F';
-                    //     ctx.fill();
-                    // }
-
                     const point: PathPoint = {
                         x: xa *this._accuracy,
                         y: ya *this._accuracy
@@ -558,33 +364,15 @@ class DraftMill3DStrategy extends Strategy{
                     vectorAngle = currentVectorAngle;
                 }
 
-
-
-
                 lastXa = xa;
                 lastYa = ya;
             }
-
-
 
             let collisioned = true;
             let dirCounter = 0;
             while(collisioned && dirCounter < directions.length){
 
                 sd = this.scanDirection(directions[dirIndex], 20, xa, ya, this._rDraftA*2);
-
-                // if(c > 830) console.log(dirIndex, {xa, ya}, sd);
-
-                // if(c === 830){
-                //     if(ctx !== null){
-                //         ctx.beginPath();
-                //         // ctx.ellipse(sd.xa, sd.ya, 1, 1, 0, 0, Math.PI*2);
-                //         ctx.ellipse(xa, ya, 3, 3, 0, 0, Math.PI*2);
-                //         ctx.fillStyle = '#FFF';
-                //         ctx.fill();
-                //     }
-                // }
-
 
                 // поиск паразитной зацикленности
                 const searchParasiticLooping = (scanDir: ScanDir, dirIndex: number): ScanDirIndex => {
@@ -610,7 +398,7 @@ class DraftMill3DStrategy extends Strategy{
                                 }
                             }
                             if(pointsEquals){
-                                // console.log(`parasitic looping: ${pointsCount} points !!!`);
+                                // parasitic looping
 
                                 let sd2 = this.scanDirection(directions[3], 20, sd.xa-1, sd.ya, this._rDraftA*2);
                                 dirIndex = 2;
@@ -679,23 +467,14 @@ class DraftMill3DStrategy extends Strategy{
                         }
                     }
         
-                    // if(ctx !== null){
-                    //     ctx.beginPath();
-                    //     ctx.ellipse(xa, ya, 1, 1, 0, 0, Math.PI*2);
-                    //     ctx.fillStyle = '#00F';
-                    //     ctx.fill();
-                    // }
-
-
                     collisioned = false;
                     dirIndex = calcDirIndex(dirIndex-1);
-
                     break;
                 }
 
-                if(maxDistCount >= 3){
-                    // if(c > 1460) console.log({c, maxDistCount});
-                }
+                // if(maxDistCount >= 3){
+
+                // }
                 maxDistCount = 0;
 
                 xa = sd.xa;
@@ -722,12 +501,9 @@ class DraftMill3DStrategy extends Strategy{
      * Процесс поиска путей на текущем слое _currentZ
      */
     private processAreas(){
+        this.findSubAreas();
 
-        const areas = this.findSubAreas();
-        // console.log(areas);
-        // let lastPP: PathPoint | null = null;
-
-        areas.forEach((area, areaInd) => {
+        this._areas.forEach((area, areaInd) => {
             if(area.entryPointFounded){
 
                 let xca1 = area.entrance.p1.x *1/this._accuracy;
@@ -737,14 +513,197 @@ class DraftMill3DStrategy extends Strategy{
                 // let yca2 = area.entrance.p2.y *1/this._accuracy;
 
                 this.findPerimeterPath(area, 10000, xca1, yca1);
-                // console.log('findCorrectionPath end');
-
             }
         });
-
-        this._areas = areas;
-
     }
+
+    /**
+     * Получение значения ячейки карты черновой обработки
+     * @param sx x
+     * @param sy y
+     */
+    getMapCell(sx: number, sy: number): number{
+        if(sx < 0 || sx >= this._scanWidth || sy < 0 || sy >= this._scanHeight)
+            return -1;
+
+        let offset = sy*this._scanWidth + sx;
+        return this._map[offset];
+    }
+
+    /**
+     * 
+     * @param sx x
+     * @param sy y
+     */
+    fillArea(sx: number, sy: number){
+        let mapCell = this.getMapCell(sx, sy);
+
+        if(mapCell === 1){
+            let offset = sy*this._scanWidth + sx;
+            this._map[offset] = 2;
+
+            if(!this._areaFirstPointFounded){
+                [
+                    [sx-1, sy],
+                    [sx+1, sy],
+                    [sx, sy-1],
+                    [sx, sy+1],
+                ].forEach(el => {
+                    if(this._areaFirstPointFounded) return;
+
+                    if([1, 2].includes( this.getMapCell(el[0], el[1]) )){
+                        this._areaFirstPointFounded = true;
+                        this._areaEntrance.p1 = {mapX: sx, mapY: sy};
+                        this._areaEntrance.p2 = {mapX: el[0], mapY: el[1]};
+                    }
+                });
+            }
+
+            this.fillArea(sx+0, sy-1);
+            this.fillArea(sx+1, sy+0);
+            this.fillArea(sx+0, sy+1);
+            this.fillArea(sx-1, sy+0);
+        }
+    }
+
+    /**
+     * Поиск поверхностей для обработки
+     */
+    findAreas(){
+        const areaEntrance = this._areaEntrance;
+        const r = this._r;
+
+        for(let i=0; i<this._map.length; i++){
+            if(this._map[i] === 1){
+
+                let mapX = i % this._scanWidth;
+                let mapY = Math.floor(i/this._scanWidth);
+
+                this._areaFirstPointFounded = false;
+                this.fillArea(mapX, mapY);
+
+                let area: ScanArea = {
+                    entryPointFounded: this._areaFirstPointFounded,
+                    entranceMap: Object.assign({}, areaEntrance),
+                    entrance: {
+                        p1: {x: areaEntrance.p1.mapX * r + r, y: areaEntrance.p1.mapY * r + r},
+                        p2: {x: areaEntrance.p2.mapX * r + r, y: areaEntrance.p2.mapY * r + r},
+                    },
+                    paths: [],
+                    perimeterPaths: [],
+                };
+
+                this._areas.push(area);
+            }
+        }
+    }
+
+    /**
+     * Поиск путей для черновой обработки
+     */
+    findDraftPathInAreas(){
+
+        const r = this._r;
+
+        let path: ScanAreaPath = {
+            points: []
+        };
+
+        let lastSx: number = -1;
+        let lastSy: number = -1;
+
+        let vectorAngle = -0.1;
+
+        const addPoint = (sx: number, sy: number) => {
+            let point: PathPoint = {
+                x: sx * r + r, 
+                y: sy * r + r
+            };
+
+            let currentVectorAngle = Math.atan2(sy-lastSy, sx-lastSx);
+            if(path.points.length >= 2){
+                if(currentVectorAngle === vectorAngle){
+                    path.points.splice(-1, 1);      // remove last item
+                }
+            }
+            vectorAngle = currentVectorAngle;
+            path.points.push(point);
+        }
+
+        const sumDist = (sx: number, sy: number): number => {
+            const sDist = Math.abs(sx-lastSx) + Math.abs(sy-lastSy);
+            return sDist;
+        }
+
+        const findPath = (area: ScanArea, sx: number, sy: number) => {
+            let mapCell = this.getMapCell(sx, sy);
+
+            const matr: [number, number][] = [ [sx-1, sy], [sx+1, sy], [sx, sy-1], [sx, sy+1] ];
+
+            if(mapCell === 2){
+                let offset = sy*this._scanWidth + sx;
+                this._map[offset] = 3;
+
+                // случай быстрого перехода
+                if(sumDist(sx, sy) === 2){
+
+                    // простое решение на один шаг
+                    let needMapPointFounded = false;
+                    matr.forEach((el: [number, number]) => {
+                        if(needMapPointFounded) return;
+                        if( this.getMapCell(el[0], el[1]) === 3 && sumDist(el[0], el[1]) === 1 ){
+                            needMapPointFounded = true;
+                            addPoint(el[0], el[1]);
+                            lastSx = el[0]; lastSy = el[1];
+                        }
+                    });
+
+                } else if(sumDist(sx, sy) > 2){
+
+                    // длинный переход
+                    let needMapPointFounded = false;
+                    matr.forEach((el: [number, number]) => {
+                        if(needMapPointFounded) return;
+                        if( this.getMapCell(el[0], el[1]) === 3 ){
+                            needMapPointFounded = true;
+                            // начало нового пути
+                            area.paths.push(path);
+                            path = {
+                                points: []
+                            };
+                            vectorAngle = -0.1;
+                            addPoint(el[0], el[1]);
+                            lastSx = el[0]; lastSy = el[1];
+                        }
+                    });
+
+                }
+
+                addPoint(sx, sy);
+
+                lastSx = sx;
+                lastSy = sy;
+
+                findPath(area, sx+0, sy-1);
+                findPath(area, sx+0, sy+1);
+                findPath(area, sx+1, sy+0);
+                findPath(area, sx-1, sy+0);
+            }
+        }
+
+        this._areas.forEach(area => {
+            path = {
+                points: []
+            };
+
+            lastSx = area.entranceMap.p1.mapX;
+            lastSy = area.entranceMap.p1.mapY;
+            findPath(area, area.entranceMap.p1.mapX, area.entranceMap.p1.mapY);
+
+            area.paths.push(path);
+        });
+    }
+
 
 
 

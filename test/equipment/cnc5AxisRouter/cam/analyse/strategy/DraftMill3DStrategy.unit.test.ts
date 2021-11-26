@@ -74,6 +74,14 @@ class DraftMill3DStrategyTest{
     }
 
     @test
+    getMapCellOutBounds(){
+        expect( this.SUT.getMapCell(-1, 2) ).to.be.equal(-1);
+        expect( this.SUT.getMapCell(2, -1) ).to.be.equal(-1);
+        expect( this.SUT.getMapCell(1e6, 0) ).to.be.equal(-1);
+        expect( this.SUT.getMapCell(1e6, 1e6) ).to.be.equal(-1);
+    }
+
+    @test
     modelLink(){
 
         let fname = 'model1.json';
