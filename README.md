@@ -1,4 +1,4 @@
-Автор: Приходько Дмитрий
+Автор: Приходько Дмитрий (Prihodko Dmitriy)
 [asketcnc@yandex.ru](mailto:asketcnc@yandex.ru)
 
 # Панель управления промышленным оборудованием на ReactJS
@@ -25,6 +25,8 @@ Projects
 * В папке `factory-management` запустить сервер `npm start`
 
 # Оборудование 
+
+[Настройки подключения wifi по WebSocket](docs/wifi-sub-equipment.md)
 
 ## ЧПУ станок плазморез (Plasma cut)
 [Протокол обмена данными по WebSocket](docs/cnc-router.md)
